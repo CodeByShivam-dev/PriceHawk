@@ -94,5 +94,5 @@ Author: Shivam Kumar
 Goal: Build an AI-backed smartphone comparison engine with concurrency, notifications, and intelligent insights.
 Status: 🚧 In development (Core API + Async Engine ready)
 
-<p align="center"><b>“Find the right price before the price finds you.”</b></p> ```
+
 
