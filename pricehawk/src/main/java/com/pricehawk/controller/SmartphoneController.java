@@ -6,6 +6,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * 🌐 REST Controller for handling smartphone price comparison requests.
@@ -44,7 +45,8 @@ public class SmartphoneController {
      * @return List of best price options with AI verdict.
      */
     @GetMapping
-    public List<SmartphoneResponse> searchSmartphones(@RequestParam String query) {
+    public List<Map<String, Object>> searchSmartphones(@RequestParam String query)
+    {
         return smartphoneService.fetchSmartphoneData(query);
     }
 }
