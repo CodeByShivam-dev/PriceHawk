@@ -1,134 +1,73 @@
 package com.pricehawk.service;
 
+import com.pricehawk.dto.SmartphoneDTO;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
 import java.util.concurrent.*;
 
 /**
- * ✅ Service Layer — Main logic for fetching and combining smartphone data
- * from multiple sources using multithreading.
+ * 🧠 SmartphoneService
  *
- * This layer handles business logic between Controller and external APIs.
- * (Currently, APIs are mocked with dummy data.)
+ * This service handles the **core business logic** of the PriceHawk system.
+ * It runs 3 fake API calls (Amazon, Flipkart, Croma) in parallel
+ * to simulate a real-world price comparison between multiple stores.
+ *
+ * ✅ Multithreading powered by ThreadPoolExecutor (configured in AsyncConfig)
+ * ✅ Returns clean DTO-based data for controller
+ * ✅ Real APIs (Amazon, Flipkart, etc.) can be easily added later
  */
+
 @Service
-public class SmartphoneService
-{
+public class SmartphoneService {
 
-    // Executor used to run multiple tasks (threads) in parallel
-    private final Executor executor;
+    private final Executor apiExecutor;
 
-    // Constructor injection — takes the thread pool bean from AsyncConfig
-    public SmartphoneService(@Qualifier("apiExecutor") Executor executor)
-    {
-        this.executor = executor;
+    // Constructor-based injection (recommended over @Autowired for Services)
+    public SmartphoneService(@Qualifier("apiExecutor") Executor apiExecutor) {
+        this.apiExecutor = apiExecutor;
     }
 
     /**
-     * 🧠 Main method to fetch smartphone data from 3 mock APIs:
-     * Amazon, Flipkart, and Croma — all running at the same time.
+     * 🚀 Fetch smartphone data in parallel (simulated async API calls)
      *
-     * @param query - smartphone name entered by user (like "iPhone 15")
-     * @return List of results sorted by price
+     * @param query — User’s search term (e.g. "iPhone 15")
+     * @return List of SmartphoneDTO (price comparison results)
      */
-    public List<Map<String, Object>> fetchSmartphoneData(String query)
-    {
+    public List<SmartphoneDTO> fetchSmartphoneData(String query) {
 
-        // Run all 3 API tasks asynchronously (in parallel)
-        CompletableFuture<Map<String, Object>> amazonData =
-                CompletableFuture.supplyAsync(() -> getFromAmazon(query), executor);
+        // 📋 Store tasks for each e-commerce site
+        List<Callable<SmartphoneDTO>> tasks = List.of(
+                () -> mockFetch("Amazon", 74999, 4.5, true),
+                () -> mockFetch("Flipkart", 73999, 4.6, true),
+                () -> mockFetch("Croma", 75999, 4.4, false)
+        );
 
-        CompletableFuture<Map<String, Object>> flipkartData =
-                CompletableFuture.supplyAsync(() -> getFromFlipkart(query), executor);
+        // ✅ Run all tasks in parallel using our async executor
+        List<SmartphoneDTO> results = new ArrayList<>();
+        try {
+            List<Future<SmartphoneDTO>> futures = ((ExecutorService) apiExecutor).invokeAll(tasks);
 
-        CompletableFuture<Map<String, Object>> cromaData =
-                CompletableFuture.supplyAsync(() -> getFromCroma(query), executor);
+            // 🧾 Collect results from all APIs
+            for (Future<SmartphoneDTO> future : futures) {
+                results.add(future.get()); // waits for each task to finish
+            }
 
-        // Wait for all tasks to complete before moving ahead
-        CompletableFuture.allOf(amazonData, flipkartData, cromaData).join();
-
-        // Combine results from all APIs into one list
-        List<Map<String, Object>> results = new ArrayList<>();
-        try
-        {
-            results.add(amazonData.get());
-            results.add(flipkartData.get());
-            results.add(cromaData.get());
-        }
-        catch (Exception e)
-        {
+        } catch (InterruptedException | ExecutionException e) {
             e.printStackTrace();
         }
 
-        // Sort all results by price (lowest to highest)
-        results.sort(Comparator.comparing(r -> (Double) r.get("price")));
-
-        // Return the final sorted list
         return results;
     }
 
-    // ---------------- MOCK API CALLS ----------------
-    // (In real project, we’ll replace these with actual REST API calls)
-
     /**
-     * 🛒 Simulates fetching product data from Amazon API
-     * Adds small delay to feel like a real network call
+     * 🎭 Mock API Simulation
+     * This mimics calling an external API and returning data.
+     * In future, replace with real HTTP API call using RestTemplate/WebClient.
      */
-    private Map<String, Object> getFromAmazon(String query)
-    {
-        delay(800); // waits for 800ms
-        return Map.of(
-                "store", "Amazon",
-                "product", query,
-                "price", 75999.0,
-                "rating", 4.6
-        );
-    }
-
-    /**
-     * 🛒 Simulates fetching product data from Flipkart API
-     */
-    private Map<String, Object> getFromFlipkart(String query)
-    {
-        delay(1000); // waits for 1 second
-        return Map.of(
-                "store", "Flipkart",
-                "product", query,
-                "price", 74999.0,
-                "rating", 4.5
-        );
-    }
-
-    /**
-     * 🛒 Simulates fetching product data from Croma API
-     */
-    private Map<String, Object> getFromCroma(String query)
-    {
-        delay(600); // waits for 0.6 second
-        return Map.of(
-                "store", "Croma",
-                "product", query,
-                "price", 75500.0,
-                "rating", 4.4
-        );
-    }
-
-    /**
-     * 🕐 Helper method — pauses thread for a few milliseconds
-     * to simulate real API call delay
-     */
-    private void delay(long ms)
-    {
-        try
-        {
-            Thread.sleep(ms);
-        }
-        catch (InterruptedException e)
-        {
-            Thread.currentThread().interrupt();
-        }
+    private SmartphoneDTO mockFetch(String store, double price, double rating, boolean inStock) throws InterruptedException {
+        Thread.sleep(800); // Simulate API latency
+        return new SmartphoneDTO(store, price, rating, inStock);
     }
 }
