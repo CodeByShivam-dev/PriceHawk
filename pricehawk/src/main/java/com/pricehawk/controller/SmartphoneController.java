@@ -5,7 +5,6 @@ import com.pricehawk.service.SmartphoneService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
-
 /**
  * 🌐 REST Controller for handling smartphone price comparison requests.
  *
@@ -28,14 +27,13 @@ import java.util.List;
  *          }
  *      ]
  */
-
 @RestController
 @RequestMapping("/api/smartphones")
-public class SmartphoneController {
+public class SmartphoneController
+{
 
     @Autowired
     private SmartphoneService smartphoneService;
-
     /**
      * 🔍 Search smartphones across multiple stores (Amazon, Flipkart, etc.)
      *
@@ -43,7 +41,8 @@ public class SmartphoneController {
      * @return List of SmartphoneDTO objects (JSON formatted)
      */
     @GetMapping
-    public List<SmartphoneDTO> searchSmartphones(@RequestParam String query) {
+    public List<SmartphoneDTO> searchSmartphones(@RequestParam String query)
+    {
         return smartphoneService.fetchSmartphoneData(query);
     }
 }

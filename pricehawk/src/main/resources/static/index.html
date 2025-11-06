@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PriceHawk 🦅 | Smartphone Price Comparison</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="container">
+    <h1 class="title">🦅 PriceHawk</h1>
+    <p class="subtitle">Compare smartphone prices across stores instantly ⚡</p>
+
+    <div class="search-box">
+        <input type="text" id="query" placeholder="Enter smartphone name (e.g. iPhone 15)" />
+        <button id="searchBtn">Compare Now</button>
+    </div>
+
+    <div id="results" class="results"></div>
+</div>
+
+<script>
+    document.getElementById('searchBtn').addEventListener('click', async () => {
+      const query = document.getElementById('query').value.trim();
+      const resultsDiv = document.getElementById('results');
+      resultsDiv.innerHTML = `<p class="loading">🌀 Fetching best prices...</p>`;
+
+      if (!query) {
+        resultsDiv.innerHTML = `<p class="error">❌ Please enter a smartphone name.</p>`;
+        return;
+      }
+
+      try {
+        const response = await fetch(`http://localhost:8080/api/smartphones?query=${encodeURIComponent(query)}`);
+        const data = await response.json();
+
+        if (!data.length) {
+          resultsDiv.innerHTML = `<p class="error">😕 No results found for "${query}".</p>`;
+          return;
+        }
+
+        // Generate cards dynamically
+        resultsDiv.innerHTML = data.map(item => `
+          <div class="card">
+            <h2>${item.store}</h2>
+            <p><strong>Price:</strong> ₹${item.price.toLocaleString()}</p>
+            <p><strong>Rating:</strong> ⭐ ${item.rating}</p>
+            <p><strong>In Stock:</strong> ${item.inStock ? '✅ Yes' : '❌ No'}</p>
+          </div>
+        `).join('');
+
+      } catch (error) {
+        resultsDiv.innerHTML = `<p class="error">🚨 Error fetching data. Please check backend.</p>`;
+        console.error(error);
+      }
+    });
+</script>
+</body>
+</html>

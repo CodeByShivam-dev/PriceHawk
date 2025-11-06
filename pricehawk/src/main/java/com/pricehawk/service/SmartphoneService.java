@@ -20,12 +20,14 @@ import java.util.concurrent.*;
  */
 
 @Service
-public class SmartphoneService {
+public class SmartphoneService
+{
 
     private final Executor apiExecutor;
 
     // Constructor-based injection (recommended over @Autowired for Services)
-    public SmartphoneService(@Qualifier("apiExecutor") Executor apiExecutor) {
+    public SmartphoneService(@Qualifier("apiExecutor") Executor apiExecutor)
+    {
         this.apiExecutor = apiExecutor;
     }
 
@@ -35,8 +37,8 @@ public class SmartphoneService {
      * @param query — User’s search term (e.g. "iPhone 15")
      * @return List of SmartphoneDTO (price comparison results)
      */
-    public List<SmartphoneDTO> fetchSmartphoneData(String query) {
-
+    public List<SmartphoneDTO> fetchSmartphoneData(String query)
+    {
         // 📋 Store tasks for each e-commerce site
         List<Callable<SmartphoneDTO>> tasks = List.of(
                 () -> mockFetch("Amazon", 74999, 4.5, true),
@@ -46,7 +48,8 @@ public class SmartphoneService {
 
         // ✅ Run all tasks in parallel using our async executor
         List<SmartphoneDTO> results = new ArrayList<>();
-        try {
+        try
+        {
             List<Future<SmartphoneDTO>> futures = ((ExecutorService) apiExecutor).invokeAll(tasks);
 
             // 🧾 Collect results from all APIs
@@ -54,7 +57,9 @@ public class SmartphoneService {
                 results.add(future.get()); // waits for each task to finish
             }
 
-        } catch (InterruptedException | ExecutionException e) {
+        }
+        catch (InterruptedException | ExecutionException e)
+        {
             e.printStackTrace();
         }
 
@@ -64,9 +69,9 @@ public class SmartphoneService {
     /**
      * 🎭 Mock API Simulation
      * This mimics calling an external API and returning data.
-     * In future, replace with real HTTP API call using RestTemplate/WebClient.
      */
-    private SmartphoneDTO mockFetch(String store, double price, double rating, boolean inStock) throws InterruptedException {
+    private SmartphoneDTO mockFetch(String store, double price, double rating, boolean inStock) throws InterruptedException
+    {
         Thread.sleep(800); // Simulate API latency
         return new SmartphoneDTO(store, price, rating, inStock);
     }
