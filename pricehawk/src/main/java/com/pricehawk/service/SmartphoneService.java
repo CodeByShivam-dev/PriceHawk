@@ -1,6 +1,8 @@
 package com.pricehawk.service;
 
 import com.pricehawk.dto.SmartphoneDTO;
+import com.pricehawk.entity.SearchHistory;
+import com.pricehawk.repository.SearchHistoryRepository;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 
@@ -10,25 +12,29 @@ import java.util.concurrent.*;
 /**
  * 🧠 SmartphoneService
  *
- * This service handles the **core business logic** of the PriceHawk system.
- * It runs 3 fake API calls (Amazon, Flipkart, Croma) in parallel
- * to simulate a real-world price comparison between multiple stores.
+ * Core business logic of PriceHawk system:
+ * ✅ Compares prices from multiple fake stores (Amazon, Flipkart, Croma)
+ * ✅ Runs all store calls concurrently using ThreadPoolExecutor
+ * ✅ Logs each user search asynchronously into the database
  *
- * ✅ Multithreading powered by ThreadPoolExecutor (configured in AsyncConfig)
- * ✅ Returns clean DTO-based data for controller
- * ✅ Real APIs (Amazon, Flipkart, etc.) can be easily added later
+ * Future-ready:
+ * - Replace mockFetch() with real API calls.
+ * - Analyze SearchHistory table for trending phones.
  */
 
 @Service
-public class SmartphoneService
-{
+public class SmartphoneService {
 
     private final Executor apiExecutor;
+    private final SearchHistoryRepository searchHistoryRepository;
 
-    // Constructor-based injection (recommended over @Autowired for Services)
-    public SmartphoneService(@Qualifier("apiExecutor") Executor apiExecutor)
-    {
+    // Constructor-based Dependency Injection (best practice)
+    public SmartphoneService(
+            @Qualifier("apiExecutor") Executor apiExecutor,
+            SearchHistoryRepository searchHistoryRepository
+    ) {
         this.apiExecutor = apiExecutor;
+        this.searchHistoryRepository = searchHistoryRepository;
     }
 
     /**
@@ -37,42 +43,46 @@ public class SmartphoneService
      * @param query — User’s search term (e.g. "iPhone 15")
      * @return List of SmartphoneDTO (price comparison results)
      */
-    public List<SmartphoneDTO> fetchSmartphoneData(String query)
-    {
-        // 📋 Store tasks for each e-commerce site
+    public List<SmartphoneDTO> fetchSmartphoneData(String query) {
+
+        // 📋 Tasks representing each e-commerce API call
         List<Callable<SmartphoneDTO>> tasks = List.of(
                 () -> mockFetch("Amazon", 74999, 4.5, true),
                 () -> mockFetch("Flipkart", 73999, 4.6, true),
                 () -> mockFetch("Croma", 75999, 4.4, false)
         );
 
-        // ✅ Run all tasks in parallel using our async executor
         List<SmartphoneDTO> results = new ArrayList<>();
-        try
-        {
+
+        try {
+            // 🧵 Run all calls in parallel
             List<Future<SmartphoneDTO>> futures = ((ExecutorService) apiExecutor).invokeAll(tasks);
 
-            // 🧾 Collect results from all APIs
+            // 🧾 Collect and add results
             for (Future<SmartphoneDTO> future : futures) {
-                results.add(future.get()); // waits for each task to finish
+                results.add(future.get());
             }
 
-        }
-        catch (InterruptedException | ExecutionException e)
-        {
+        } catch (InterruptedException | ExecutionException e) {
             e.printStackTrace();
         }
+
+        // 💾 Async logging (doesn’t block API response)
+        CompletableFuture.runAsync(() -> {
+            SearchHistory history = new SearchHistory(query, results.size());
+            searchHistoryRepository.save(history);
+        });
 
         return results;
     }
 
     /**
      * 🎭 Mock API Simulation
-     * This mimics calling an external API and returning data.
+     * Simulates calling external APIs like Amazon, Flipkart, etc.
      */
-    private SmartphoneDTO mockFetch(String store, double price, double rating, boolean inStock) throws InterruptedException
-    {
-        Thread.sleep(800); // Simulate API latency
+    private SmartphoneDTO mockFetch(String store, double price, double rating, boolean inStock)
+            throws InterruptedException {
+        Thread.sleep(800); // simulate network delay
         return new SmartphoneDTO(store, price, rating, inStock);
     }
 }
