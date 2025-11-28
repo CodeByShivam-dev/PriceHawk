@@ -10,16 +10,27 @@ import org.springframework.stereotype.Service;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.stream.Collectors;
 
 /**
- * SmartphoneService — updated to use real scrapers via PriceScraperService
+ * Service responsible for fetching smartphone pricing data across multiple vendors.
+ *
+ * Design Intent:
+ * - Provide near real-time prices while leveraging DB caching to reduce scraper load.
+ * - Execute parallel scraping for performance (Amazon, Flipkart, Croma) using Executor.
+ * - Maintain search history and snapshots asynchronously for analytics and future tracking.
+ *
+ * Notes for future enhancements:
+ * - Support user-specific tracking (userId)
+ * - Retry/fallback strategies for partial failures
+ * - Rate-limiting or throttling to avoid anti-bot detection
  */
 @Service
-public class SmartphoneService {
+public class SmartphoneService
+{
 
     private static final Logger log = LoggerFactory.getLogger(SmartphoneService.class);
 
@@ -33,7 +44,8 @@ public class SmartphoneService {
             PriceScraperService scraperService,
             SearchHistoryRepository searchHistoryRepository,
             PriceSnapshotRepository priceSnapshotRepository
-    ) {
+    )
+    {
         this.apiExecutor = apiExecutor;
         this.scraperService = scraperService;
         this.searchHistoryRepository = searchHistoryRepository;
@@ -41,101 +53,131 @@ public class SmartphoneService {
     }
 
     /**
-     * Fetch live prices from Amazon, Flipkart, Croma in parallel.
-     * Return list of successful SmartphonePriceResult.
+     * Fetch smartphone pricing data for a given query.
+     *
+     * Workflow:
+     * 1️⃣ Check DB cache for recent snapshots (within 3 hours) → reduces scraping load.
+     * 2️⃣ If cache is empty or stale, execute parallel scraping across vendors.
+     * 3️⃣ Collect partial results even if some scrapers fail.
+     * 4️⃣ Save snapshots and search history asynchronously.
+     * 5️⃣ Return price-sorted list with non-null prices.
+     *
+     * @param query User search query (model name)
+     * @return List of smartphone pricing results sorted by price.
      */
-    public List<SmartphonePriceResult> fetchSmartphoneData(String query) {
+    public List<SmartphonePriceResult> fetchSmartphoneData(String query)
+    {
+        Instant now = Instant.now();
+        Instant recentThreshold = now.minusSeconds(3 * 3600); // 3-hour caching window
 
-        // Prepare futures (wrap Optional result into nullable result)
-        CompletableFuture<SmartphonePriceResult> fAmazon = CompletableFuture.supplyAsync(() ->
-                scraperService.scrapeAmazon(query).orElse(null), apiExecutor);
+        // --- Step 1: Fetch cached DB results ---
+        List<PriceSnapshot> cached = priceSnapshotRepository
+                .findByModelNormalizedAndCapturedAtAfter(query.toLowerCase().trim(), recentThreshold);
 
-        CompletableFuture<SmartphonePriceResult> fFlipkart = CompletableFuture.supplyAsync(() ->
-                scraperService.scrapeFlipkart(query).orElse(null), apiExecutor);
+        if (cached != null && !cached.isEmpty())
+        {
+            log.info("Serving cached DB results for query {}", query);
+            return cached.stream()
+                    .map(snap -> new SmartphonePriceResult(
+                            snap.getStore(),
+                            snap.getPrice(),
+                            snap.getProductUrl(),
+                            snap.getTitle(),
+                            Boolean.TRUE.equals(snap.getInStock()),
+                            snap.getImageUrl(),
+                            snap.getRating()
+                    ))
+                    .collect(Collectors.toList());
+        }
 
-        CompletableFuture<SmartphonePriceResult> fCroma = CompletableFuture.supplyAsync(() ->
-                scraperService.scrapeCroma(query).orElse(null), apiExecutor);
+        // --- Step 2: Parallel scraping across vendors ---
+        CompletableFuture<SmartphonePriceResult> fAmazon = CompletableFuture.supplyAsync(
+                () -> scraperService.scrapeAmazon(query).orElse(null), apiExecutor);
+        CompletableFuture<SmartphonePriceResult> fFlipkart = CompletableFuture.supplyAsync(
+                () -> scraperService.scrapeFlipkart(query).orElse(null), apiExecutor);
+        CompletableFuture<SmartphonePriceResult> fCroma = CompletableFuture.supplyAsync(
+                () -> scraperService.scrapeCroma(query).orElse(null), apiExecutor);
 
-        // Wait for all, but don't fail fast — gather successful ones
         CompletableFuture<Void> all = CompletableFuture.allOf(fAmazon, fFlipkart, fCroma);
 
-        try {
-            // Wait (bounded) for completion
+        try
+        {
+            // Timeout ensures system doesn't block indefinitely if a vendor is slow
             all.get(15, TimeUnit.SECONDS);
-        } catch (InterruptedException ie) {
-            Thread.currentThread().interrupt();
-            log.warn("Interrupted while scraping for query={}", query);
-        } catch (ExecutionException | TimeoutException ex) {
-            log.warn("Timeout or execution error while scraping for query={}, continuing with what we have", query, ex);
+        }
+        catch (Exception ex)
+        {
+            log.warn("Partial scrape failed: {}", ex.getMessage());
         }
 
+        // --- Step 3: Collect non-null results ---
         List<SmartphonePriceResult> rawResults = Arrays.asList(fAmazon, fFlipkart, fCroma).stream()
-                .map(f -> {
-                    try {
-                        return f.getNow(null); // if not completed, returns null
-                    } catch (CompletionException ce) {
-                        return null;
-                    }
-                }).filter(Objects::nonNull)
+                .map(f -> f.getNow(null))
+                .filter(Objects::nonNull)
                 .collect(Collectors.toList());
 
-        log.info("Scraping complete for query='{}'. successful results={}", query, rawResults.size());
+        log.info("Scraping done for '{}', results={}", query, rawResults.size());
 
-        // Persist price snapshots for successful results (non-blocking)
-        CompletableFuture.runAsync(() -> {
-            try {
-                for (SmartphonePriceResult r : rawResults) {
-                    PriceSnapshot snap = new PriceSnapshot(query, r.getStore(), r.getPrice(), r.getProductUrl());
-                    snap.setCapturedAt(LocalDateTime.now());
-                    priceSnapshotRepository.save(snap);
-                }
-            } catch (Exception e) {
-                log.error("Failed to save price snapshots for query={}", query, e);
-            }
-        });
+        // --- Step 4: Save snapshots and search history asynchronously ---
+        CompletableFuture.runAsync(() -> saveSnapshots(query, rawResults));
+        CompletableFuture.runAsync(() -> saveHistory(query, rawResults.size()));
 
-        // Save search history async
-        CompletableFuture.runAsync(() -> {
-            try {
-                SearchHistory history = new SearchHistory(query, rawResults.size());
-                searchHistoryRepository.save(history);
-            } catch (Exception e) {
-                log.error("Failed to save search history for query={}", query, e);
-            }
-        });
-
-        // If no results, return empty list (controller should handle)
-        if (rawResults.isEmpty()) {
-            log.warn("No scraping results available for query={}", query);
-            return Collections.emptyList();
-        }
-
-        // Return results sorted by price ascending (cheapest first)
-        List<SmartphonePriceResult> sorted = rawResults.stream()
+        // --- Step 5: Return sorted list with valid prices ---
+        return rawResults.stream()
                 .filter(r -> r.getPrice() != null)
                 .sorted(Comparator.comparingDouble(SmartphonePriceResult::getPrice))
                 .collect(Collectors.toList());
-
-        return sorted;
     }
 
     /**
-     * Simple verdict generator (can be upgraded to AI-based later).
-     * Example: "Flipkart offers best deal at ₹73,999 (₹2,000 cheaper than Amazon)"
+     * Persist price snapshots for analytics and caching.
+     *
+     * Note:
+     * - Currently no userId association; can be extended for personalized tracking.
      */
-    public String generateVerdict(List<SmartphonePriceResult> results) {
-        if (results == null || results.isEmpty()) return "No results to judge.";
-
-        SmartphonePriceResult best = results.get(0);
-        Optional<SmartphonePriceResult> next = results.stream().skip(1).findFirst();
-
-        String base = String.format("%s offers the best deal at ₹%.0f", best.getStore(), best.getPrice());
-        if (next.isPresent()) {
-            double diff = next.get().getPrice() - best.getPrice();
-            if (diff > 0) {
-                base += String.format(" (₹%.0f cheaper than %s)", diff, next.get().getStore());
+    private void saveSnapshots(String query, List<SmartphonePriceResult> results)
+    {
+        try
+        {
+            for (SmartphonePriceResult r : results)
+            {
+                PriceSnapshot snap = new PriceSnapshot(
+                        query,
+                        r.getStore(),
+                        r.getPrice(),
+                        r.getProductUrl(),
+                        r.getImageUrl(),
+                        r.getTitle(),
+                        r.getRating(),
+                        r.isInStock(),
+                        null // Future: associate with userId if tracked
+                );
+                snap.setCapturedAt(Instant.now());
+                priceSnapshotRepository.save(snap);
             }
         }
-        return base;
+        catch (Exception e)
+        {
+            log.error("Snapshot save failed for {}", query, e);
+        }
+    }
+
+    /**
+     * Record search query history for analytics and metrics.
+     *
+     * - Helps understand trending models
+     * - Can be used for recommendation engine in future
+     */
+    private void saveHistory(String query, int count)
+    {
+        try
+        {
+            SearchHistory history = new SearchHistory(query, count, null);
+            searchHistoryRepository.save(history);
+        }
+        catch (Exception e)
+        {
+            log.error("History save failed for {}", query, e);
+        }
     }
 }
