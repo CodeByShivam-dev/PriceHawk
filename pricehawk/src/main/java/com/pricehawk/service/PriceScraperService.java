@@ -214,59 +214,84 @@ public class PriceScraperService
      * Flipkart HTML is more stable than Amazon, but class names are obfuscated
      * and change without announcement. We rely on the most consistent parent containers.
      */
-    public Optional<SmartphonePriceResult> scrapeFlipkart(String query)
-    {
-        try
-        {
-            String url = "https://www.flipkart.com/search?q=" +
-                    URLEncoder.encode(query, StandardCharsets.UTF_8);
+    public Optional<SmartphonePriceResult> scrapeFlipkart(String query) {
+        try {
+            String url = "https://www.flipkart.com/search?q=" + URLEncoder.encode(query, StandardCharsets.UTF_8);
+            log.info("Flipkart search URL: {}", url);
 
             Document searchDoc = safeGet(url).orElse(null);
-            if (searchDoc == null) return Optional.empty();
+            if (searchDoc == null) {
+                log.warn("Flipkart: searchDoc is null for query={}", query);
+                return Optional.empty();
+            }
 
-            Element first = searchDoc.selectFirst("a._1fQZEK, div._2kHMtA");
-            if (first == null) return Optional.empty();
+            // 1) Outer product card (current list layout)
+            Element card = searchDoc.selectFirst("div._2kHMtA");
+            if (card == null) {
+                // 2) Fallback: simple grid layout cards
+                card = searchDoc.selectFirst("div._4ddWXP, div._1AtVbE");
+            }
+            if (card == null) {
+                log.warn("Flipkart: no product card found for query={}", query);
+                return Optional.empty();
+            }
 
-            String href = first.attr("href");
-            if (href == null) return Optional.empty();
+            // Link element for product
+            Element linkEl = card.selectFirst("a._1fQZEK, a.s1Q9rs, a._2rpwqI");
+            if (linkEl == null) {
+                log.warn("Flipkart: product link element not found in card");
+                return Optional.empty();
+            }
 
-            String productUrl = href.startsWith("http")
-                    ? href
-                    : "https://www.flipkart.com" + href;
+            String href = linkEl.attr("href");
+            if (href == null || href.isBlank()) {
+                log.warn("Flipkart: href missing in product link");
+                return Optional.empty();
+            }
+            String productUrl = href.startsWith("http") ? href : "https://www.flipkart.com" + href;
 
-            Document prodDoc = safeGet(productUrl).orElse(null);
-            if (prodDoc == null) return Optional.empty();
-
-            Element priceEl = prodDoc.selectFirst("div._30jeq3");
-
+            // Price from listing card
+            Element priceEl = card.selectFirst("div._30jeq3");
             String priceText = priceEl != null ? priceEl.text() : null;
+            if (priceText == null) {
+                log.warn("Flipkart: price element not found in listing card");
+                return Optional.empty();
+            }
 
-            String title =
-                    Optional.ofNullable(prodDoc.selectFirst("span.B_NuCI"))
-                            .map(Element::text)
-                            .orElse(query);
+            Double price = parsePrice(priceText);
+            if (price == null) {
+                log.warn("Flipkart: unable to parse price '{}'", priceText);
+                return Optional.empty();
+            }
 
-            boolean inStock = true;
-            Element outEl = prodDoc.selectFirst("div._16FRp0");
-            if (outEl != null && outEl.text().toLowerCase().contains("out of stock"))
-                inStock = false;
+            // Title/model name
+            String title = linkEl.attr("title");
+            if (title == null || title.isBlank()) {
+                title = linkEl.text();
+            }
+            if (title == null || title.isBlank()) {
+                title = query;
+            }
 
-            Double price = priceText != null ? parsePrice(priceText) : null;
+            boolean inStock = true; // listing usually doesn't show out-of-stock directly
 
-            String imageUrl = getImageUrl(prodDoc);
-            Double rating = getRating(prodDoc);
+            SmartphonePriceResult res = new SmartphonePriceResult(
+                    "Flipkart",
+                    price,
+                    productUrl,
+                    title,
+                    inStock,
+                    null,   // imageUrl (optional)
+                    null    // rating (optional)
+            );
 
-            return price != null
-                    ? Optional.of(new SmartphonePriceResult("Flipkart", price, productUrl, title, inStock, imageUrl, rating))
-                    : Optional.empty();
-
-        }
-        catch (Exception ex)
-        {
+            return Optional.of(res);
+        } catch (Exception ex) {
             log.error("Flipkart scraping failed for query={}", query, ex);
             return Optional.empty();
         }
     }
+
 
     /**
      * Croma scraper.
