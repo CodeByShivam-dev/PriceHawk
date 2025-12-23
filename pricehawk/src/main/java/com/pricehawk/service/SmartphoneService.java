@@ -19,9 +19,18 @@ import java.util.stream.Collectors;
 
 /**
  * Service responsible for fetching smartphone pricing data across multiple vendors.
+ *
+ * Key Features / Recruiter Highlights:
+ * - Caching: Returns results from DB if captured within last 3 hours
+ * - Parallel scraping: Amazon & Flipkart (Croma optional/future)
+ * - Async specs API integration
+ * - Fallback mechanism for demo/testing
+ * - Async snapshot/history persistence
+ * - Price sorting & specs injection for best-price card
  */
 @Service
-public class SmartphoneService {
+public class SmartphoneService
+{
 
     private static final Logger log = LoggerFactory.getLogger(SmartphoneService.class);
 
@@ -29,32 +38,50 @@ public class SmartphoneService {
     private final PriceScraperService scraperService;
     private final SearchHistoryRepository searchHistoryRepository;
     private final PriceSnapshotRepository priceSnapshotRepository;
+    private final PhoneSpecsService phoneSpecsService;
 
-    // Demo-mode flag: true => empty result pe fallback demo cards
+    // Demo-mode flag: if true, show placeholder cards when live results are empty
     private static final boolean DEMO_FALLBACK_ENABLED = true;
 
     public SmartphoneService(
             @Qualifier("apiExecutor") Executor apiExecutor,
             PriceScraperService scraperService,
             SearchHistoryRepository searchHistoryRepository,
-            PriceSnapshotRepository priceSnapshotRepository
-    ) {
+            PriceSnapshotRepository priceSnapshotRepository,
+            PhoneSpecsService phoneSpecsService
+    )
+    {
         this.apiExecutor = apiExecutor;
         this.scraperService = scraperService;
         this.searchHistoryRepository = searchHistoryRepository;
         this.priceSnapshotRepository = priceSnapshotRepository;
+        this.phoneSpecsService = phoneSpecsService;
     }
 
-    public List<SmartphonePriceResult> fetchSmartphoneData(String query) {
+    /**
+     * Fetches smartphone data for a query.
+     *
+     * Flow:
+     * 1. Check DB cache first
+     * 2. Scrape live vendors in parallel
+     * 3. Fetch specs summary asynchronously
+     * 4. Fallback to search URLs if no live data
+     * 5. Inject specs into best-priced result
+     * 6. Persist snapshots and search history asynchronously
+     */
+
+    public List<SmartphonePriceResult> fetchSmartphoneData(String query)
+    {
         Instant now = Instant.now();
         Instant recentThreshold = now.minusSeconds(3 * 3600); // 3-hour caching window
         String normalized = query.toLowerCase().trim();
 
-        // --- Step 1: Fetch cached DB results ---
+        // Fetch cached DB results ---
         List<PriceSnapshot> cached = priceSnapshotRepository
                 .findByModelNormalizedAndCapturedAtAfter(normalized, recentThreshold);
 
-        if (cached != null && !cached.isEmpty()) {
+        if (cached != null && !cached.isEmpty())
+        {
             log.info("Serving cached DB results for query {}", query);
             return cached.stream()
                     .map(snap -> new SmartphonePriceResult(
@@ -64,30 +91,41 @@ public class SmartphoneService {
                             snap.getTitle(),
                             Boolean.TRUE.equals(snap.getInStock()),
                             snap.getImageUrl(),
-                            snap.getRating()
+                            snap.getRating(),
+                            null // specsSummary not stored yet
                     ))
                     .collect(Collectors.toList());
         }
 
-        // --- Step 2: Parallel scraping across vendors ---
+        //  Parallel scraping across vendors + specs ---
         CompletableFuture<SmartphonePriceResult> fAmazon = CompletableFuture.supplyAsync(
                 () -> scraperService.scrapeAmazon(query).orElse(null), apiExecutor);
 
         CompletableFuture<SmartphonePriceResult> fFlipkart = CompletableFuture.supplyAsync(
                 () -> scraperService.scrapeFlipkart(query).orElse(null), apiExecutor);
 
+        // Specs async (external phone-specs API)
+        CompletableFuture<String> fSpecs = CompletableFuture.supplyAsync(
+                () -> phoneSpecsService.fetchSpecsSummary(query).orElse(null),
+                apiExecutor
+        );
+
         // Croma disabled for now
         // CompletableFuture<SmartphonePriceResult> fCroma = ...
 
-        CompletableFuture<Void> all = CompletableFuture.allOf(fAmazon, fFlipkart);
+        // Wait for all futures, but do not fail whole process if one fails
+        CompletableFuture<Void> all = CompletableFuture.allOf(fAmazon, fFlipkart, fSpecs);
 
-        try {
+        try
+        {
             all.get(15, TimeUnit.SECONDS);
-        } catch (Exception ex) {
+        }
+        catch (Exception ex)
+        {
             log.warn("Partial scrape failed: {}", ex.getMessage());
         }
 
-        // --- Step 3: Collect non-null results ---
+        // -Collect non-null results ---
         List<SmartphonePriceResult> rawResults = Arrays.asList(fAmazon, fFlipkart).stream()
                 .map(f -> f.getNow(null))
                 .filter(Objects::nonNull)
@@ -95,34 +133,49 @@ public class SmartphoneService {
 
         log.info("Scraping done for '{}', results={}", query, rawResults.size());
 
-        // --- Step 3.5: Demo fallback if everything failed ---
-        if (rawResults.isEmpty() && DEMO_FALLBACK_ENABLED) {
-            log.warn("No live results for '{}'. Using demo fallback cards.", query);
+        // Specs future result
+        String specsSummary = fSpecs.getNow(null);
+
+        //  Fallback - direct search links + placeholder image ---
+        if (rawResults.isEmpty() && DEMO_FALLBACK_ENABLED)
+        {
+            log.warn("No live results for '{}'. Using direct search fallback cards.", query);
             String encoded = URLEncoder.encode(query, StandardCharsets.UTF_8);
 
             rawResults = List.of(
                     new SmartphonePriceResult(
                             "Flipkart",
-                            74999.0,
-                            "https://www.flipkart.com/search?q=" + encoded,
-                            query + " (demo fallback)",
-                            true,
                             null,
-                            4.5
+                            "https://www.flipkart.com/search?q=" + encoded,
+                            "Open Flipkart search for " + query,
+                            true,
+                            "https://placehold.co/300x300?text=Flipkart+Phone",
+                            null,
+                            null
                     ),
                     new SmartphonePriceResult(
                             "Amazon",
-                            75999.0,
-                            "https://www.amazon.in/s?k=" + encoded,
-                            query + " (demo fallback)",
-                            true,
                             null,
-                            4.3
+                            "https://www.amazon.in/s?k=" + encoded,
+                            "Open Amazon search for " + query,
+                            true,
+                            "https://placehold.co/300x300?text=Amazon+Phone",
+                            null,
+                            null
                     )
             );
         }
 
-        // --- Step 4: Save snapshots and search history asynchronously (only for real results) ---
+        // --- Step 3.6: Inject specs into best priced result (only when we have real prices) ---
+        if (!rawResults.isEmpty() && specsSummary != null && !specsSummary.isBlank())
+        {
+            rawResults.stream()
+                    .filter(r -> r.getPrice() != null)
+                    .min(Comparator.comparingDouble(SmartphonePriceResult::getPrice))
+                    .ifPresent(best -> best.setSpecsSummary(specsSummary));
+        }
+
+        //  Save snapshots and search history asynchronously (only for real results) ---
         List<SmartphonePriceResult> finalResults = rawResults; // effectively final for lambda
 
         if (!finalResults.isEmpty()
@@ -132,22 +185,36 @@ public class SmartphoneService {
             CompletableFuture.runAsync(() -> saveHistory(query, finalResults.size()));
         }
 
-        // --- Step 5: Return sorted list with valid prices ---
+        //: Return list, real prices first, then fallbacks ---
         return finalResults.stream()
-                .filter(r -> r.getPrice() != null)
-                .sorted(Comparator.comparingDouble(SmartphonePriceResult::getPrice))
+                .sorted(Comparator.comparing(
+                        SmartphonePriceResult::getPrice,
+                        Comparator.nullsLast(Double::compareTo)
+                ))
                 .collect(Collectors.toList());
     }
 
-    // Heuristic: agar sabhi titles me "(demo fallback)" ho, to unko DB me log na karo
-    private boolean isDemoOnlyResults(List<SmartphonePriceResult> results) {
+    /**
+     * Heuristic: returns true if all results are demo fallback cards.
+     * Prevents saving placeholder results to DB.
+     */
+    private boolean isDemoOnlyResults(List<SmartphonePriceResult> results)
+    {
         return results.stream()
                 .allMatch(r -> r.getTitle() != null && r.getTitle().contains("(demo fallback)"));
     }
 
-    private void saveSnapshots(String query, List<SmartphonePriceResult> results) {
-        try {
-            for (SmartphonePriceResult r : results) {
+    /**
+     * Saves a snapshot of all fetched smartphone prices.
+     * Each snapshot includes store, price, URL, title, image, rating, and timestamp.
+     */
+
+    private void saveSnapshots(String query, List<SmartphonePriceResult> results)
+    {
+        try
+        {
+            for (SmartphonePriceResult r : results)
+            {
                 PriceSnapshot snap = new PriceSnapshot(
                         query,
                         r.getStore(),
@@ -162,16 +229,24 @@ public class SmartphoneService {
                 snap.setCapturedAt(Instant.now());
                 priceSnapshotRepository.save(snap);
             }
-        } catch (Exception e) {
+        }
+        catch (Exception e)
+        {
             log.error("Snapshot save failed for {}", query, e);
         }
     }
-
-    private void saveHistory(String query, int count) {
-        try {
+    /**
+     * Saves search history for analytics and monitoring.
+     */
+    private void saveHistory(String query, int count)
+    {
+        try
+        {
             SearchHistory history = new SearchHistory(query, count, null);
             searchHistoryRepository.save(history);
-        } catch (Exception e) {
+        }
+        catch (Exception e)
+        {
             log.error("History save failed for {}", query, e);
         }
     }
