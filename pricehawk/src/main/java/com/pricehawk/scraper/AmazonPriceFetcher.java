@@ -80,9 +80,14 @@ public class AmazonPriceFetcher implements PriceFetcher
 
             Double rating = null;
             Element ratingElem = card.selectFirst("span.a-icon-alt");
-            if (ratingElem != null) {
-                try { rating = Double.parseDouble(ratingElem.text().replaceAll("[^0-9.]", "")); }
-                catch (Exception ignored) {}
+            if (ratingElem != null)
+            {
+                try
+                {
+                    rating = Double.parseDouble(ratingElem.text().replaceAll("[^0-9.]", ""));
+                }
+                catch (Exception ignored)
+                {}
             }
 
             boolean inStock = true;
@@ -92,7 +97,9 @@ public class AmazonPriceFetcher implements PriceFetcher
                     "https://via.placeholder.com/300.png?text=Amazon+Phone", rating, null
             ));
 
-        } catch (Exception e) {
+        }
+        catch (Exception e)
+        {
             log.error("Amazon fetch error for query '{}': {}", query, e.getMessage());
         }
 
@@ -104,12 +111,16 @@ public class AmazonPriceFetcher implements PriceFetcher
      * Handles currency symbols and thousand separators.
      */
 
-    private Double parse(String p) {
-        try {
+    private Double parse(String p)
+    {
+        try
+        {
             String cleaned = p.replaceAll("[^0-9.,]", "").replace(",", "");
             if (cleaned.isBlank()) return null;
             return Double.parseDouble(cleaned);
-        } catch (Exception e) {
+        }
+        catch (Exception e)
+        {
             return null;
         }
     }
