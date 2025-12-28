@@ -5,123 +5,142 @@ import lombok.extern.slf4j.Slf4j;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
+import org.openqa.selenium.*;
+import org.openqa.selenium.chrome.ChromeDriver;
+import org.openqa.selenium.chrome.ChromeOptions;
 
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
-/**
- * Amazon-specific price fetcher implementation.
- *
- * Responsibility:
- * - Perform lightweight scraping of Amazon search results
- * - Extract best available product card data
- * - Convert raw HTML into structured domain DTOs
- *
- * This class intentionally focuses only on extraction logic.
- * Caching, persistence, retries, and orchestration are handled
- * at higher service layers.
- */
+import java.util.Random;
 
+/**
+ * Amazon-specific price fetcher using Selenium + Jsoup.
+ *
+ * Features:
+ * - Headless Chrome to handle JS-loaded pages
+ * - Retry logic with exponential backoff
+ * - Random delays to reduce bot detection
+ * - Fallback selectors for robustness
+ */
 @Slf4j
 public class AmazonPriceFetcher implements PriceFetcher
 {
-    /**
-     * Custom user-agent to reduce the chance of bot blocking.
-     * Mimics a modern desktop browser.
-     */
-    private static final String USER_AGENT =
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
-                    + "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
 
-    /**
-     * Fetch price results for a given search query from Amazon.
-     *
-     * Design choices:
-     * - Returns a list to stay consistent with other fetchers,
-     *   even though we currently extract only the top result.
-     * - Fails gracefully: any missing critical field results in
-     *   an empty list rather than throwing errors upstream.
-     */
+    private static final int MAX_RETRIES = 3;
+    private static final Random RANDOM = new Random();
+
+    private final WebDriver driver;
+
+    public AmazonPriceFetcher()
+    {
+        ChromeOptions options = new ChromeOptions();
+        options.addArguments("--headless=new");  // Headless mode
+        options.addArguments("--disable-gpu");
+        options.addArguments("--no-sandbox");
+        options.addArguments("--window-size=1920,1080");
+        options.addArguments("--user-agent=" + getRandomUserAgent());
+
+        this.driver = new ChromeDriver(options);
+        this.driver.manage().timeouts().implicitlyWait(Duration.ofSeconds(10));
+    }
 
     @Override
-    public List<SmartphonePriceResult> fetchPrices(String query)
-    {
+    public List<SmartphonePriceResult> fetchPrices(String query) {
         List<SmartphonePriceResult> results = new ArrayList<>();
-        try
-        {
-            String url = "https://www.amazon.in/s?k=" +
-                    URLEncoder.encode(query, StandardCharsets.UTF_8);
+        String url = "https://www.amazon.in/s?k=" + URLEncoder.encode(query, StandardCharsets.UTF_8);
 
-            Document doc = Jsoup.connect(url)
-                    .userAgent(USER_AGENT)
-                    .timeout(10000)
-                    .referrer("https://google.com")
-                    .get();
+        for (int attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+            try {
+                // Random small delay to mimic human behavior
+                Thread.sleep(1000 + RANDOM.nextInt(2000));
 
-            // Pick the first valid search result card
-            Element card = doc.selectFirst("div.s-main-slot div[data-component-type='s-search-result']");
-            if (card == null) return results;
+                driver.get(url);
+                String pageHtml = driver.getPageSource();
+                Document doc = Jsoup.parse(pageHtml);
 
-            // Resolve product link (relative → absolute)
-            Element linkElem = card.selectFirst("a.a-link-normal.s-no-outline");
-            if (linkElem == null) return results;
-            String href = linkElem.attr("href");
-            String fullLink = href.startsWith("http") ? href : "https://www.amazon.in" + href;
+                // Multiple result fallback
+                for (Element card : doc.select("div[data-component-type='s-search-result']")) {
 
-            // Price is treated as mandatory; skip result if unavailable
-            Element priceElem = card.selectFirst("span.a-price span.a-offscreen");
-            if (priceElem == null) return results;
-            Double price = parse(priceElem.text());
-            if (price == null) return results;
+                    // Product link
+                    Element linkElem = card.selectFirst("a.a-link-normal.s-no-outline");
+                    if (linkElem == null) continue;
+                    String href = linkElem.attr("href");
+                    String fullLink = href.startsWith("http") ? href : "https://www.amazon.in" + href;
 
-            Element titleElem = card.selectFirst("span.a-size-medium, span.a-size-base-plus");
-            String title = titleElem != null ? titleElem.text() : query;
+                    // Price
+                    Element priceElem = card.selectFirst("span.a-price span.a-offscreen");
+                    if (priceElem == null) continue;
+                    Double price = parsePrice(priceElem.text());
+                    if (price == null) continue;
 
-            Double rating = null;
-            Element ratingElem = card.selectFirst("span.a-icon-alt");
-            if (ratingElem != null)
-            {
-                try
-                {
-                    rating = Double.parseDouble(ratingElem.text().replaceAll("[^0-9.]", ""));
+                    // Title
+                    Element titleElem = card.selectFirst("span.a-size-medium, span.a-size-base-plus");
+                    String title = titleElem != null ? titleElem.text() : query;
+
+                    // Rating
+                    Double rating = null;
+                    Element ratingElem = card.selectFirst("span.a-icon-alt");
+                    if (ratingElem != null) {
+                        try {
+                            String text = ratingElem.text().split(" ")[0];
+                            rating = Double.parseDouble(text.replaceAll("[^0-9.]", ""));
+                        } catch (Exception ignored) {}
+                    }
+
+                    // Stock check
+                    boolean inStock = !card.text().toLowerCase().contains("unavailable");
+
+                    results.add(new SmartphonePriceResult(
+                            "Amazon", price, fullLink, title, inStock,
+                            getImageUrl(card), rating, null
+                    ));
+
+                    // Return first valid match
+                    return results;
                 }
-                catch (Exception ignored)
-                {}
+
+                // No valid results, break retry loop
+                break;
+
+            } catch (Exception e) {
+                log.warn("Attempt {} failed for query '{}': {}", attempt, query, e.getMessage());
+                try {
+                    Thread.sleep(2000L * attempt);  // exponential backoff
+                } catch (InterruptedException ignored) {}
             }
-
-            boolean inStock = true;
-
-            results.add(new SmartphonePriceResult(
-                    "Amazon", price, fullLink, title, inStock,
-                    "https://via.placeholder.com/300.png?text=Amazon+Phone", rating, null
-            ));
-
-        }
-        catch (Exception e)
-        {
-            log.error("Amazon fetch error for query '{}': {}", query, e.getMessage());
         }
 
         return results;
     }
 
-    /**
-     * Utility to normalize price strings into numeric values.
-     * Handles currency symbols and thousand separators.
-     */
-
-    private Double parse(String p)
-    {
-        try
-        {
-            String cleaned = p.replaceAll("[^0-9.,]", "").replace(",", "");
+    private Double parsePrice(String p) {
+        try {
+            String cleaned = p.replaceAll("[^0-9.]", "").replace(",", "");
             if (cleaned.isBlank()) return null;
             return Double.parseDouble(cleaned);
-        }
-        catch (Exception e)
-        {
+        } catch (Exception e) {
             return null;
         }
+    }
+
+    private String getImageUrl(Element card) {
+        Element img = card.selectFirst("img.s-image");
+        return img != null ? img.attr("src") : "https://via.placeholder.com/300.png?text=Amazon+Phone";
+    }
+
+    private String getRandomUserAgent() {
+        String[] agents = {
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+                "Mozilla/5.0 (Macintosh; Intel Mac OS X 13_5) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.5 Safari/605.1.15",
+                "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36"
+        };
+        return agents[RANDOM.nextInt(agents.length)];
+    }
+
+    public void close() {
+        if (driver != null) driver.quit();
     }
 }
