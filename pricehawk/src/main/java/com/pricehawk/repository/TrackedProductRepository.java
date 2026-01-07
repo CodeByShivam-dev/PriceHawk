@@ -4,14 +4,13 @@ import com.pricehawk.entity.TrackedProduct;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
-/**
- * 🧠 TrackedProductRepository
- *
- * Handles database operations for TrackedProduct entities.
- * (Add, find, delete tracked models, etc.)
- */
+import java.util.List;
 
+/**
+ * Repository for TrackedProduct (watchlist/favorites).
+ */
 @Repository
 public interface TrackedProductRepository extends JpaRepository<TrackedProduct, Long>
 {
+    List<TrackedProduct> findByUserId(Long userId);
 }
