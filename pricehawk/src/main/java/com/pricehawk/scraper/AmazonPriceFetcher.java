@@ -17,13 +17,16 @@ import java.util.List;
 import java.util.Random;
 
 /**
- * Amazon-specific price fetcher using Selenium + Jsoup.
+ * Amazon scraper backed by Selenium.
  *
- * Features:
- * - Headless Chrome to handle JS-loaded pages
- * - Retry logic with exponential backoff
- * - Random delays to reduce bot detection
- * - Fallback selectors for robustness
+ * Why Selenium?
+ * Amazon heavily relies on dynamic rendering and anti-bot measures.
+ * Jsoup alone tends to fail intermittently → Selenium stabilizes extraction.
+ *
+ * Design goals:
+ * - survive minor DOM changes (fallback selectors)
+ * - avoid aggressive scraping patterns
+ * - fail gracefully (never crash upstream flow)
  */
 @Slf4j
 public class AmazonPriceFetcher implements PriceFetcher
@@ -37,110 +40,165 @@ public class AmazonPriceFetcher implements PriceFetcher
     public AmazonPriceFetcher()
     {
         ChromeOptions options = new ChromeOptions();
-        options.addArguments("--headless=new");  // Headless mode
+
+        // headless is enough here, full browser not needed
+        options.addArguments("--headless=new");
         options.addArguments("--disable-gpu");
         options.addArguments("--no-sandbox");
+
+        // consistent viewport → avoids layout-based selector issues
         options.addArguments("--window-size=1920,1080");
+
+        // rotating UA helps reduce trivial bot flags (not foolproof)
         options.addArguments("--user-agent=" + getRandomUserAgent());
 
         this.driver = new ChromeDriver(options);
+
+        // keep implicit wait minimal — we rely on retry instead
         this.driver.manage().timeouts().implicitlyWait(Duration.ofSeconds(10));
     }
 
     @Override
-    public List<SmartphonePriceResult> fetchPrices(String query) {
+    public List<SmartphonePriceResult> fetchPrices(String query)
+    {
         List<SmartphonePriceResult> results = new ArrayList<>();
-        String url = "https://www.amazon.in/s?k=" + URLEncoder.encode(query, StandardCharsets.UTF_8);
 
-        for (int attempt = 1; attempt <= MAX_RETRIES; attempt++) {
-            try {
-                // Random small delay to mimic human behavior
+        String url = "https://www.amazon.in/s?k=" +
+                URLEncoder.encode(query, StandardCharsets.UTF_8);
+
+        for (int attempt = 1; attempt <= MAX_RETRIES; attempt++)
+        {
+            try
+            {
+                // small jitter to avoid predictable request patterns
                 Thread.sleep(1000 + RANDOM.nextInt(2000));
 
                 driver.get(url);
+
+                // we still parse via Jsoup for easier selector handling
                 String pageHtml = driver.getPageSource();
                 Document doc = Jsoup.parse(pageHtml);
 
-                // Multiple result fallback
-                for (Element card : doc.select("div[data-component-type='s-search-result']")) {
-
-                    // Product link
+                // iterate over visible search results
+                for (Element card : doc.select("div[data-component-type='s-search-result']"))
+                {
                     Element linkElem = card.selectFirst("a.a-link-normal.s-no-outline");
                     if (linkElem == null) continue;
-                    String href = linkElem.attr("href");
-                    String fullLink = href.startsWith("http") ? href : "https://www.amazon.in" + href;
 
-                    // Price
+                    String href = linkElem.attr("href");
+                    String fullLink = href.startsWith("http")
+                            ? href
+                            : "https://www.amazon.in" + href;
+
                     Element priceElem = card.selectFirst("span.a-price span.a-offscreen");
                     if (priceElem == null) continue;
+
                     Double price = parsePrice(priceElem.text());
                     if (price == null) continue;
 
-                    // Title
                     Element titleElem = card.selectFirst("span.a-size-medium, span.a-size-base-plus");
                     String title = titleElem != null ? titleElem.text() : query;
 
-                    // Rating
+                    // rating is optional → do not fail extraction for it
                     Double rating = null;
                     Element ratingElem = card.selectFirst("span.a-icon-alt");
-                    if (ratingElem != null) {
-                        try {
+                    if (ratingElem != null)
+                    {
+                        try
+                        {
                             String text = ratingElem.text().split(" ")[0];
                             rating = Double.parseDouble(text.replaceAll("[^0-9.]", ""));
-                        } catch (Exception ignored) {}
+                        }
+                        catch (Exception ignored) {}
                     }
 
-                    // Stock check
+                    // quick heuristic (not perfect but cheap)
                     boolean inStock = !card.text().toLowerCase().contains("unavailable");
 
                     results.add(new SmartphonePriceResult(
-                            "Amazon", price, fullLink, title, inStock,
-                            getImageUrl(card), rating, null
+                            "Amazon",
+                            price,
+                            fullLink,
+                            title,
+                            inStock,
+                            getImageUrl(card),
+                            rating,
+                            null
                     ));
 
-                    // Return first valid match
+                    // we only need the best/top result → exit early
                     return results;
                 }
 
-                // No valid results, break retry loop
+                // no usable cards → no point retrying same DOM repeatedly
                 break;
-
-            } catch (Exception e) {
+            }
+            catch (Exception e)
+            {
                 log.warn("Attempt {} failed for query '{}': {}", attempt, query, e.getMessage());
-                try {
-                    Thread.sleep(2000L * attempt);  // exponential backoff
-                } catch (InterruptedException ignored) {}
+
+                try
+                {
+                    // basic exponential backoff
+                    Thread.sleep(2000L * attempt);
+                }
+                catch (InterruptedException ignored) {}
             }
         }
 
         return results;
     }
 
-    private Double parsePrice(String p) {
-        try {
-            String cleaned = p.replaceAll("[^0-9.]", "").replace(",", "");
+    private Double parsePrice(String raw)
+    {
+        try
+        {
+            String cleaned = raw.replaceAll("[^0-9.]", "").replace(",", "");
             if (cleaned.isBlank()) return null;
+
             return Double.parseDouble(cleaned);
-        } catch (Exception e) {
+        }
+        catch (Exception e)
+        {
+            // silent fail — bad price shouldn't break pipeline
             return null;
         }
     }
 
-    private String getImageUrl(Element card) {
+    private String getImageUrl(Element card)
+    {
         Element img = card.selectFirst("img.s-image");
-        return img != null ? img.attr("src") : "https://via.placeholder.com/300.png?text=Amazon+Phone";
+
+        // fallback ensures UI never breaks
+        return img != null
+                ? img.attr("src")
+                : "https://via.placeholder.com/300.png?text=Amazon+Phone";
     }
 
-    private String getRandomUserAgent() {
+    /**
+     * Not a strong anti-bot measure, but helps avoid naive blocking.
+     * Real systems would rotate proxies + headers.
+     */
+    private String getRandomUserAgent()
+    {
         String[] agents = {
                 "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
                 "Mozilla/5.0 (Macintosh; Intel Mac OS X 13_5) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.5 Safari/605.1.15",
                 "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36"
         };
+
         return agents[RANDOM.nextInt(agents.length)];
     }
 
-    public void close() {
-        if (driver != null) driver.quit();
+    /**
+     * Important: driver should be closed by caller/service lifecycle.
+     * Otherwise Chrome instances will leak.
+     */
+    public void close()
+    {
+        if (driver != null)
+        {
+            driver.quit();
+        }
     }
 }
