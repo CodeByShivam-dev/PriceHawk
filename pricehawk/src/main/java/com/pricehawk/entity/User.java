@@ -1,55 +1,163 @@
 package com.pricehawk.entity;
 
 import jakarta.persistence.*;
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 /**
- * User
+ * Basic user record used across the system.
  *
- * Minimal user table for authentication/notifications.
- * In early stage we store only email (unique), displayName and when created.
- * Later you can add:
- *  - password (hashed) / OAuth fields
- *  - notification preferences (email/sms)
- *  - role/permissions
+ * Current scope:
+ * - identification (email)
+ * - lightweight profile (displayName, phone)
+ * - notification preferences
+ *
+ * Designed to be extended later (auth providers, roles, etc.)
+ * without forcing early complexity into the schema.
  */
 @Entity
-@Table(name = "app_user",
+@Table(
+        name = "app_user",
         indexes = {
+                // email is used frequently for lookup/login → index helps
                 @Index(name = "idx_user_email", columnList = "email")
-        })
-public class User {
+        }
+)
+public class User
+{
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    /** Unique email (primary method of contact). */
+    /**
+     * Primary identifier for the user.
+     * Enforced unique to avoid duplicate accounts.
+     */
     @Column(name = "email", nullable = false, unique = true, length = 256)
     private String email;
 
-    /** Optional display name. */
+    // Optional display name (UI friendly, not used for identity)
     @Column(name = "display_name", length = 128)
     private String displayName;
 
-    /** When the user registered. */
+    /**
+     * Optional phone number.
+     * Not mandatory because not all users will opt for SMS notifications.
+     */
+    @Column(name = "phone", length = 15)
+    private String phone;
+
+    /**
+     * Notification preference.
+     * Kept as String for flexibility (instead of enum) during early stage.
+     * Example values: "email", "sms", "both"
+     */
+    @Column(name = "notification_pref", length = 32)
+    private String notificationPref;
+
+    /**
+     * Basic account state.
+     * Useful for soft-blocking users without deleting data.
+     * Example: "active", "blocked"
+     */
+    @Column(name = "status", length = 16)
+    private String status;
+
+    /**
+     * Creation timestamp.
+     * Set at application level instead of DB default for consistency.
+     */
     @Column(name = "created_at", nullable = false)
-    private LocalDateTime createdAt;
+    private Instant createdAt;
 
-    public User() {}
-
-    public User(String email, String displayName) {
-        this.email = email;
-        this.displayName = displayName;
-        this.createdAt = LocalDateTime.now();
+    public User()
+    {
     }
 
-    // getters & setters
-    public Long getId() { return id; }
-    public String getEmail() { return email; }
-    public void setEmail(String email) { this.email = email; }
-    public String getDisplayName() { return displayName; }
-    public void setDisplayName(String displayName) { this.displayName = displayName; }
-    public LocalDateTime getCreatedAt() { return createdAt; }
-    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
+    /**
+     * Primary constructor used during registration.
+     * Keeps initialization logic centralized.
+     */
+    public User(String email,
+                String displayName,
+                String phone,
+                String notificationPref,
+                String status)
+    {
+        this.email = email;
+        this.displayName = displayName;
+        this.phone = phone;
+        this.notificationPref = notificationPref;
+        this.status = status;
+
+        // capturing creation time explicitly
+        this.createdAt = Instant.now();
+    }
+
+    // --- Getters / Setters ---
+
+    public Long getId()
+    {
+        return id;
+    }
+
+    public String getEmail()
+    {
+        return email;
+    }
+
+    public void setEmail(String email)
+    {
+        this.email = email;
+    }
+
+    public String getDisplayName()
+    {
+        return displayName;
+    }
+
+    public void setDisplayName(String displayName)
+    {
+        this.displayName = displayName;
+    }
+
+    public String getPhone()
+    {
+        return phone;
+    }
+
+    public void setPhone(String phone)
+    {
+        this.phone = phone;
+    }
+
+    public String getNotificationPref()
+    {
+        return notificationPref;
+    }
+
+    public void setNotificationPref(String notificationPref)
+    {
+        this.notificationPref = notificationPref;
+    }
+
+    public String getStatus()
+    {
+        return status;
+    }
+
+    public void setStatus(String status)
+    {
+        this.status = status;
+    }
+
+    public Instant getCreatedAt()
+    {
+        return createdAt;
+    }
+
+    public void setCreatedAt(Instant createdAt)
+    {
+        this.createdAt = createdAt;
+    }
 }
