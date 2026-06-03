@@ -1,166 +1,187 @@
 package com.pricehawk.dto;
 
-import java.time.Instant;
+import lombok.Data;
 
 /**
- * Data Transfer Object (DTO) representing the price information
- * of a smartphone from a single e-commerce store.
+ * Unified response model used across the pricing pipeline.
  *
- * Design intent:
- * - This class is intentionally kept free of persistence annotations.
- * - It acts as a clean contract between:
- *      → scraping layer
- *      → service layer
- *      → API responses / frontend consumption
- *
- * Keeping this DTO stable allows internal implementations
- * (scrapers, database schema, notification logic) to evolve
- * without breaking API consumers.
+ * Every scraper (Amazon, Flipkart, Croma, future providers, etc.)
+ * converts its raw output into this DTO so the aggregation and API
+ * layers can work with a single consistent structure.
  */
+@Data
 public class SmartphonePriceResult
 {
 
-    private String store;        // Store name: Flipkart, Amazon, Croma, etc.
-    private Double price;        // Current listed price
-    private String productUrl;   // Direct link to the product page
-    private String title;        // Product title/name as displayed
-    private boolean inStock;     // Is the product in stock?
-    private Instant checkedAt;   // When was this data fetched/scraped?
-    private String imageUrl;     // URL of product image/thumbnail
-    private Double rating;       // Optional: product's star rating (if available)
-    private String specsSummary; // Short specs summary (RAM, storage, etc.)
+    private String store;
+    private String title;
+
+    /*
+     * Prices are stored as Integer because the application currently
+     * works with whole INR values only. This also keeps sorting,
+     * comparisons and API payloads straightforward.
+     */
+    private Integer price;
+
+    /*
+     * Condensed specification text shown in result cards.
+     * Example:
+     * "8GB RAM · 256GB Storage · Snapdragon 8 Gen 3"
+     */
+    private String specsSummary;
+
+    private String imageUrl;
+    private String productUrl;
+
+    /*
+     * Not every marketplace exposes ratings consistently,
+     * therefore this field is intentionally nullable.
+     */
+    private Double rating;
+
+    /*
+     * Nullable by design.
+     *
+     * true  -> confirmed in stock
+     * false -> confirmed out of stock
+     * null  -> availability could not be determined
+     */
+    private Boolean inStock;
 
     public SmartphonePriceResult()
     {
     }
+
     /**
-     * Primary constructor used by scraping services
-     * when full product data is available.
+     * Constructor primarily used by scraper implementations.
      *
-     * Automatically sets the fetch timestamp to current time.
+     * Scrapers usually extract prices as Double values, while the rest
+     * of the system consumes normalized integer prices.
      */
-    public SmartphonePriceResult(String store,
-                                 Double price,
-                                 String productUrl,
-                                 String title,
-                                 boolean inStock,
-                                 String imageUrl,
-                                 Double rating,
-                                 String specsSummary)
+    public SmartphonePriceResult(
+            String store,
+            Double price,
+            String productUrl,
+            String title,
+            boolean inStock,
+            String imageUrl,
+            Double rating
+    )
     {
         this.store = store;
-        this.price = price;
-        this.productUrl = productUrl;
         this.title = title;
-        this.inStock = inStock;
+        this.price = price != null ? price.intValue() : null;
+        this.productUrl = productUrl;
         this.imageUrl = imageUrl;
         this.rating = rating;
-        this.specsSummary = specsSummary;
-        this.checkedAt = Instant.now();
-    }
-    /**
-     * Lightweight constructor for stores
-     * that do not expose all metadata.
-     *
-     * Allows partial results instead of failing the entire response.
-     */
-    public SmartphonePriceResult(String store,
-                                 Double price,
-                                 String productUrl,
-                                 String title,
-                                 boolean inStock, String imageUrl, Double rating)
-    {
-        this(store, price, productUrl, title, inStock, null, null, null);
-    }
-
-    // --- Getters & Setters ---
-
-    public String getStore()
-    {
-        return store;
-    }
-
-    public void setStore(String store)
-    {
-        this.store = store;
-    }
-
-    public Double getPrice()
-    {
-        return price;
-    }
-
-    public void setPrice(Double price)
-    {
-        this.price = price;
-    }
-
-    public String getProductUrl()
-    {
-        return productUrl;
-    }
-
-    public void setProductUrl(String productUrl)
-    {
-        this.productUrl = productUrl;
-    }
-
-    public String getTitle()
-    {
-        return title;
-    }
-
-    public void setTitle(String title)
-    {
-        this.title = title;
-    }
-
-    public boolean isInStock() {
-        return inStock;
-    }
-
-    public void setInStock(boolean inStock)
-    {
         this.inStock = inStock;
     }
 
-    public Instant getCheckedAt()
+    /**
+     * Legacy constructor retained temporarily for older scraper
+     * implementations that have not yet been migrated.
+     *
+     * Safe to remove once all call sites use the primary constructor
+     * or builder API.
+     */
+    public SmartphonePriceResult(
+            String store,
+            Double price,
+            String productUrl,
+            String title,
+            boolean inStock,
+            String imageUrl,
+            Double rating,
+            Object ignored
+    )
     {
-        return checkedAt;
     }
 
-    public void setCheckedAt(Instant checkedAt)
+    public static Builder builder()
     {
-        this.checkedAt = checkedAt;
+        return new Builder();
     }
 
-    public String getImageUrl()
+    /**
+     * Manual builder kept intentionally instead of Lombok @Builder.
+     *
+     * This gives explicit control over object creation and avoids
+     * generated builder code becoming part of the public contract.
+     */
+    public static class Builder
     {
-        return imageUrl;
-    }
 
-    public void setImageUrl(String imageUrl)
-    {
-        this.imageUrl = imageUrl;
-    }
+        private String store;
+        private String title;
+        private Integer price;
+        private String specsSummary;
+        private String imageUrl;
+        private String productUrl;
+        private Double rating;
+        private Boolean inStock;
 
-    public Double getRating()
-    {
-        return rating;
-    }
+        public Builder store(String store)
+        {
+            this.store = store;
+            return this;
+        }
 
-    public void setRating(Double rating)
-    {
-        this.rating = rating;
-    }
+        public Builder title(String title)
+        {
+            this.title = title;
+            return this;
+        }
 
-    public String getSpecsSummary()
-    {
-        return specsSummary;
-    }
+        public Builder price(Integer price)
+        {
+            this.price = price;
+            return this;
+        }
 
-    public void setSpecsSummary(String specsSummary)
-    {
-        this.specsSummary = specsSummary;
+        public Builder specsSummary(String specsSummary)
+        {
+            this.specsSummary = specsSummary;
+            return this;
+        }
+
+        public Builder imageUrl(String imageUrl)
+        {
+            this.imageUrl = imageUrl;
+            return this;
+        }
+
+        public Builder productUrl(String productUrl)
+        {
+            this.productUrl = productUrl;
+            return this;
+        }
+
+        public Builder rating(Double rating)
+        {
+            this.rating = rating;
+            return this;
+        }
+
+        public Builder inStock(Boolean inStock)
+        {
+            this.inStock = inStock;
+            return this;
+        }
+
+        public SmartphonePriceResult build()
+        {
+            SmartphonePriceResult result = new SmartphonePriceResult();
+
+            result.store = this.store;
+            result.title = this.title;
+            result.price = this.price;
+            result.specsSummary = this.specsSummary;
+            result.imageUrl = this.imageUrl;
+            result.productUrl = this.productUrl;
+            result.rating = this.rating;
+            result.inStock = this.inStock;
+
+            return result;
+        }
     }
 }
