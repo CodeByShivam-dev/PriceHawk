@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script src="js/main.js" defer></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🦅 PriceHawk Dashboard</title>
+
+<style>
+/* RESET & BASE */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+body {
+  background: linear-gradient(135deg, #0f0f0f 0%, #1a1a2e 50%, #16213e 100%);
+  color: #f8f9fa;
+  min-height: 100vh;
+  line-height: 1.6;
+}
+
+/* HEADER - Sticky & Responsive */
+header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.5rem 2.5rem;
+  background: rgba(17,17,17,0.98);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid rgba(245,164,37,0.3);
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  box-shadow: 0 2px 20px rgba(0,0,0,0.3);
+}
+
+.logo {
+  font-size: clamp(1.5rem, 4vw, 2rem);
+  font-weight: 900;
+  background: linear-gradient(135deg, #f5a425, #ffcd3c, #f59e0b);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  letter-spacing: -0.5px;
+}
+
+nav {
+  display: flex;
+  gap: 1.5rem;
+  align-items: center;
+}
+
+nav a {
+  color: #f8f9fa;
+  text-decoration: none;
+  font-size: 0.95rem;
+  font-weight: 500;
+  padding: 0.5rem 1rem;
+  border-radius: 25px;
+  transition: all 0.3s ease;
+  white-space: nowrap;
+}
+
+nav a.active,
+nav a:hover {
+  color: #f5a425;
+  background: rgba(245,164,37,0.1);
+  transform: translateY(-1px);
+}
+
+/* MAIN CONTAINER */
+.dashboard {
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: 2.5rem 2rem;
+}
+
+/* WELCOME SECTION */
+.welcome-section {
+  text-align: center;
+  margin-bottom: 3rem;
+  animation: fadeInUp 0.8s ease-out;
+}
+
+.welcome-section h2 {
+  font-size: clamp(2rem, 5vw, 3.5rem);
+  font-weight: 800;
+  margin-bottom: 0.75rem;
+  background: linear-gradient(135deg, #f5a425, #ffcd3c);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.welcome-section p {
+  color: #a0a0a0;
+  font-size: 1.1rem;
+  max-width: 500px;
+  margin: 0 auto;
+}
+
+/* STATS GRID - FIXED SIZE */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 3rem;
+}
+
+.stat-card {
+  padding: 2rem;
+  background: rgba(245,164,37,0.08);
+  border-radius: 20px;
+  text-align: center;
+  border: 1px solid rgba(245,164,37,0.1);
+  transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  position: relative;
+  overflow: hidden;
+  min-height: 120px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.stat-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #f5a425, #ffcd3c);
+}
+
+.stat-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 15px 30px rgba(245,164,37,0.2);
+  background: rgba(245,164,37,0.12);
+}
+
+.stat-card h3 {
+  font-size: clamp(1.75rem, 4vw, 2.5rem);
+  font-weight: 800;
+  color: #f5a425;
+  margin-bottom: 0.5rem;
+}
+
+.stat-card p {
+  color: #b0b0b0;
+  font-size: 0.95rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* SEARCH SECTION - Hero Style */
+.search-section {
+  padding: 3rem 2.5rem;
+  background: rgba(245,164,37,0.06);
+  border-radius: 25px;
+  margin-bottom: 3rem;
+  border: 1px solid rgba(245,164,37,0.15);
+  backdrop-filter: blur(10px);
+}
+
+.input-group {
+  display: flex;
+  max-width: 600px;
+  margin: 0 auto;
+  gap: 0;
+  border-radius: 50px;
+  overflow: hidden;
+  box-shadow: 0 10px 30px rgba(245,164,37,0.2);
+}
+
+.form-control {
+  flex: 1;
+  padding: 1.25rem 2rem;
+  border: none;
+  background: rgba(255,255,255,0.05);
+  color: #f8f9fa;
+  font-size: 1.1rem;
+  outline: none;
+}
+
+.form-control::placeholder {
+  color: #888;
+}
+
+.form-control:focus {
+  background: rgba(255,255,255,0.08);
+}
+
+.btn {
+  padding: 1.25rem 2.5rem;
+  border: none;
+  background: linear-gradient(135deg, #f5a425, #ffcd3c);
+  color: #1a1a2e;
+  font-weight: 700;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  white-space: nowrap;
+  position: relative;
+  overflow: hidden;
+}
+
+.btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 25px rgba(245,164,37,0.35);
+  background: linear-gradient(135deg, #ffcd3c, #f5a425);
+}
+
+.btn:active {
+  transform: translateY(0);
+}
+
+/* RESULTS GRID - PERFECTLY FIXED SIZE */
+.results-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 1.75rem;
+  margin-bottom: 4rem;
+}
+
+.result-card {
+  background: rgba(30,30,46,0.8);
+  padding: 2rem;
+  border-radius: 20px;
+  text-align: center;
+  border: 1px solid rgba(245,164,37,0.1);
+  transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  backdrop-filter: blur(10px);
+  /* FIXED SIZE - NO JUMPING */
+  min-height: 220px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+.result-card:hover {
+  /* NO SCALE - SIRF LIFT */
+  transform: translateY(-8px);
+  box-shadow: 0 20px 40px rgba(245,164,37,0.25);
+  border-color: rgba(245,164,37,0.4);
+  background: rgba(30,30,46,0.95);
+}
+
+/* Result card content glow */
+.result-card:hover * {
+  color: #f8f9fa;
+}
+
+/* Image hover effect (if you have images) */
+.result-card img {
+  transition: all 0.3s ease;
+  border-radius: 12px;
+  max-width: 100%;
+  height: auto;
+}
+
+.result-card:hover img {
+  box-shadow: 0 10px 25px rgba(245,164,37,0.3);
+  transform: scale(1.05);
+}
+
+/* LOADING STATE */
+.loading {
+  text-align: center;
+  padding: 4rem 2rem;
+  grid-column: 1 / -1;
+}
+
+.loading p {
+  color: #888;
+  font-size: 1.2rem;
+}
+
+/* FOOTER */
+footer {
+  text-align: center;
+  padding: 2rem;
+  color: #666;
+  border-top: 1px solid rgba(255,255,255,0.05);
+  font-size: 0.9rem;
+}
+
+/* ANIMATIONS */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.stats-grid .stat-card {
+  animation: fadeInUp 0.6s ease-out forwards;
+}
+
+.stats-grid .stat-card:nth-child(1) { animation-delay: 0.1s; }
+.stats-grid .stat-card:nth-child(2) { animation-delay: 0.2s; }
+.stats-grid .stat-card:nth-child(3) { animation-delay: 0.3s; }
+.stats-grid .stat-card:nth-child(4) { animation-delay: 0.4s; }
+
+/* RESPONSIVE BREAKPOINTS */
+
+/* Mobile First - Up to 640px */
+@media (max-width: 640px) {
+  header {
+    padding: 1rem 1.5rem;
+    flex-direction: column;
+    gap: 1rem;
+    text-align: center;
+  }
+
+  nav {
+    gap: 1rem;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .dashboard {
+    padding: 1.5rem 1rem;
+  }
+
+  .search-section {
+    padding: 2rem 1.5rem;
+  }
+
+  .input-group {
+    flex-direction: column;
+  }
+
+  .form-control,
+  .btn {
+    border-radius: 15px;
+  }
+
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+  }
+
+  .results-grid {
+    grid-template-columns: 1fr;
+    gap: 1.25rem;
+  }
+
+  .result-card {
+    min-height: 200px;
+    padding: 1.5rem;
+  }
+}
+
+/* Tablet - 641px to 1024px */
+@media (min-width: 641px) and (max-width: 1024px) {
+  header {
+    padding: 1.5rem 2rem;
+  }
+
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .results-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* Large Desktop - 1025px+ */
+@media (min-width: 1025px) {
+  .stats-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+
+  .results-grid {
+    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+  }
+}
+
+/* Extra Large - 1440px+ */
+@media (min-width: 1440px) {
+  .dashboard {
+    padding: 3rem 4rem;
+  }
+}
+
+/* High Performance */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+</style>
+</head>
+
+<body>
+<header>
+  <div class="logo">🦅 PriceHawk</div>
+  <nav>
+    <a href="index.html">Home</a>
+    <a href="#">Stores</a>
+    <a href="dashboard.html" class="active">Dashboard</a>
+    <a href="#">Alerts</a>
+  </nav>
+</header>
+
+<section class="dashboard">
+  <!-- Welcome -->
+  <div class="welcome-section">
+    <h2>Welcome back! 👋</h2>
+    <p>Track prices, set alerts, and find the best deals across all stores</p>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats-grid">
+    <div class="stat-card">
+      <h3 id="total-searches">127</h3>
+      <p>Total Searches</p>
+    </div>
+    <div class="stat-card">
+      <h3 id="total-savings">₹24,750</h3>
+      <p>Savings</p>
+    </div>
+    <div class="stat-card">
+      <h3 id="active-alerts">8</h3>
+      <p>Active Alerts</p>
+    </div>
+    <div class="stat-card">
+      <h3 id="best-deals">23</h3>
+      <p>Best Deals</p>
+    </div>
+  </div>
+
+  <!-- Search -->
+  <div class="search-section">
+    <div class="input-group">
+      <input type="text" id="phoneSearch" class="form-control" placeholder="🔍 Search phone, laptop, or any product...">
+      <button class="btn" onclick="searchPhone()">Search Now</button>
+    </div>
+  </div>
+
+  <!-- Results -->
+  <div id="results" class="results-grid">
+    <div class="loading">
+      <p>Search to see live price comparisons from all stores...</p>
+    </div>
+  </div>
+</section>
+
+<footer>
+  © 2026 PriceHawk. All rights reserved. | Built for speed & reliability.
+</footer>
+
+</body>
+</html>

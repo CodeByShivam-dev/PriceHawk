@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🦅 PriceHawk - Smart Price Comparison</title>
+  
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/pricehawk.css">
+
+  <style>
+    /* PriceHawk GOLD Theme - Video Background SAFE */
+    :root {
+      --pricehawk-gold: #f5a425;
+      --amazon-orange: #ff9900;
+      --flipkart-blue: #0675cb;
+      --croma-pink: #e83e8c;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body { 
+      margin: 0; 
+      font-family: Poppins, sans-serif; 
+      overflow-x: hidden;
+    }
+
+    /* Navbar - Fixed + Blur */
+    .navbar {
+      background: rgba(10,10,10,0.85);
+      backdrop-filter: blur(18px);
+      border-bottom: 1px solid rgba(245,164,37,0.25);
+      transition: all 0.4s ease;
+    }
+
+    .navbar-brand {
+      font-weight: 900;
+      font-size: clamp(20px, 5vw, 26px);
+      letter-spacing: 1px;
+      transition: all 0.3s ease;
+    }
+
+    .navbar-brand:hover {
+      transform: scale(1.05);
+    }
+
+    .nav-link {
+      position: relative;
+      color: white !important;
+      font-weight: 600;
+      margin-left: 18px;
+      padding: 8px 0;
+      transition: all 0.3s ease;
+      font-size: clamp(14px, 3vw, 16px);
+    }
+
+    .nav-link::after {
+      content: '';
+      position: absolute;
+      width: 0%;
+      height: 2px;
+      left: 0;
+      bottom: -4px;
+      background: linear-gradient(135deg, #f5a425, #ffcd3c);
+      transition: width 0.3s ease;
+    }
+
+    .nav-link:hover::after {
+      width: 100%;
+    }
+
+    .nav-link:hover {
+      color: #f5a425 !important;
+      transform: translateY(-2px);
+    }
+
+    .navbar.scrolled {
+      background: rgba(0,0,0,0.98) !important;
+      backdrop-filter: blur(30px);
+      box-shadow: 0 8px 30px rgba(0,0,0,0.6);
+    }
+
+    /* Hero Video Background */
+    .hero-video {
+      position: relative;
+      min-height: 100vh;
+      overflow: hidden;
+    }
+
+    #bg-video {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      z-index: -2;
+    }
+
+    .video-overlay {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.6);
+      z-index: -1;
+    }
+
+    .hero-content {
+      position: relative;
+      z-index: 2;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      color: white;
+      text-align: center;
+      padding: clamp(40px, 10vw, 120px) 20px 40px;
+    }
+
+    .hero-content h2 {
+      font-size: clamp(1.8rem, 4vw, 3.5rem);
+      font-weight: 900;
+      color: #ffffff;
+      text-shadow: 0 10px 40px rgba(0,0,0,0.8);
+      margin-bottom: 0.5rem;
+    }
+
+    .hero-content h1 {
+      font-size: clamp(2.5rem, 6vw, 5rem);
+      font-weight: 900;
+      letter-spacing: 2px;
+      margin-bottom: 1rem;
+      text-shadow: 3px 3px 6px rgba(0,0,0,0.7);
+    }
+
+    .hero-content p {
+      font-size: clamp(1rem, 2.5vw, 1.35rem);
+      max-width: 650px;
+      margin-bottom: 2rem;
+      line-height: 1.7;
+    }
+
+    .btn-custom {
+      background: linear-gradient(135deg, var(--pricehawk-gold), #ffcd3c);
+      color: black !important;
+      font-weight: 700;
+      padding: clamp(14px, 4vw, 18px) clamp(30px, 8vw, 45px);
+      border-radius: 50px;
+      font-size: clamp(16px, 3vw, 18px);
+      border: none;
+      box-shadow: 0 12px 35px rgba(245,164,37,0.5);
+      transition: all 0.4s ease;
+      text-decoration: none;
+      display: inline-block;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      min-height: 48px;
+      white-space: nowrap;
+    }
+
+    .btn-custom:hover {
+      transform: translateY(-5px) scale(1.05);
+      box-shadow: 0 20px 45px rgba(245,164,37,0.7);
+    }
+
+    /* Services Grid - PriceHawk Stores */
+    .services {
+      background: linear-gradient(135deg, #0f0f0f 0%, #1a1a1a 100%);
+      padding: clamp(60px, 10vw, 100px) 20px;
+      color: white;
+    }
+
+    .services h3 {
+      font-size: clamp(2rem, 6vw, 3.2rem);
+      text-align: center;
+      margin-bottom: clamp(2rem, 5vw, 4rem);
+      font-weight: 800;
+      background: linear-gradient(135deg, var(--pricehawk-gold), white);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .service-cards {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: clamp(20px, 4vw, 30px);
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+    .service-card {
+      position: relative;
+      height: clamp(220px, 30vw, 280px);
+      border-radius: 25px;
+      overflow: hidden;
+      transition: all 0.4s ease;
+      text-decoration: none;
+      color: white;
+      border: 2px solid rgba(255,255,255,0.1);
+    }
+
+    .service-card:hover {
+      transform: translateY(-15px) scale(1.02);
+      border-color: var(--pricehawk-gold);
+      box-shadow: 0 25px 60px rgba(245,164,37,0.3);
+    }
+
+    .service-card.amazon { background: linear-gradient(135deg, var(--amazon-orange), #ff7f00); }
+    .service-card.flipkart { background: linear-gradient(135deg, var(--flipkart-blue), #005ea6); }
+    .service-card.croma { background: linear-gradient(135deg, var(--croma-pink), #d91a72); }
+    .service-card.myntra { background: linear-gradient(135deg, #ff3f6c, #ff8fab); }
+    .service-card.reliance { background: linear-gradient(135deg, #2874f0, #1e3a8a); }
+
+    .store-logo {
+      height: clamp(80px, 15vw, 130px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding-top: 15px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .store-img {
+      width: clamp(60px, 12vw, 90px);
+      height: clamp(60px, 12vw, 90px);
+      object-fit: contain;
+      object-position: center;
+      border-radius: 15px;
+      position: relative;
+      z-index: 10;
+    }
+
+    .store-img svg,
+    .store-img svg text,
+    .store-img svg * {
+      display: none !important;
+    }
+
+    .store-img img {
+      display: block;
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+
+    .store-img:not([src*="assets"]) {
+      background: rgba(255,255,255,0.1);
+    }
+
+    .service-card:hover .store-img {
+      transform: scale(1.15);
+      filter: drop-shadow(0 20px 40px rgba(245,164,37,0.6));
+    }
+
+    .overlay {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: linear-gradient(transparent, rgba(0,0,0,0.9));
+      padding: clamp(12px, 3vw, 20px);
+      height: calc(100% - clamp(80px, 15vw, 130px));
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+    }
+
+    .overlay h4 {
+      font-size: clamp(1.3rem, 4vw, 2rem);
+      font-weight: 800;
+      margin-bottom: 12px;
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+    }
+
+    .overlay p {
+      font-size: clamp(0.9rem, 2.5vw, 1.1rem);
+      opacity: 0.95;
+      line-height: 1.6;
+    }
+
+    /* Testimonials */
+    .testimonials {
+      background: linear-gradient(135deg, var(--pricehawk-gold) 0%, #e6a700 100%);
+      padding: clamp(60px, 10vw, 100px) 20px;
+      text-align: center;
+      color: #1a1a1a;
+    }
+
+    .testimonials h3 {
+      font-size: clamp(2rem, 6vw, 3rem);
+      margin-bottom: clamp(2rem, 5vw, 4rem);
+      font-weight: 800;
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .testimonial-container {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: clamp(20px, 4vw, 35px);
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .testimonial-card {
+      background: rgba(255,255,255,0.95);
+      backdrop-filter: blur(15px);
+      border-radius: 25px;
+      padding: clamp(20px, 5vw, 40px) clamp(18px, 4vw, 35px);
+      box-shadow: 0 15px 45px rgba(0,0,0,0.15);
+      border: 1px solid rgba(255,255,255,0.4);
+      transition: all 0.4s ease;
+    }
+
+    .testimonial-card:hover {
+      transform: translateY(-12px);
+      box-shadow: 0 25px 60px rgba(0,0,0,0.25);
+    }
+
+    .testimonial-stars {
+      color: #f5a425;
+      font-size: clamp(1.4rem, 3vw, 1.8rem);
+      margin-bottom: 20px;
+    }
+
+    .testimonial-text {
+      font-size: clamp(1rem, 2.5vw, 1.15rem);
+      line-height: 1.7;
+      margin-bottom: 25px;
+      font-style: italic;
+      font-weight: 400;
+    }
+
+    .testimonial-author {
+      font-weight: 700;
+      font-size: clamp(1rem, 2vw, 1.1rem);
+      color: var(--pricehawk-gold);
+    }
+
+    /* CTA Section */
+    .cta {
+      background: linear-gradient(135deg, #111 0%, #1a1a1a 100%);
+      padding: clamp(80px, 12vw, 120px) 20px;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .cta::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: 
+        radial-gradient(circle at 20% 50%, rgba(245,164,37,0.2), transparent 50%),
+        radial-gradient(circle at 80% 20%, rgba(245,164,37,0.1), transparent 50%);
+      z-index: 1;
+    }
+
+    .cta-content {
+      position: relative;
+      z-index: 2;
+      max-width: 900px;
+      margin: 0 auto;
+    }
+
+    .cta h3 {
+      font-size: clamp(2.2rem, 6vw, 3.5rem);
+      margin-bottom: 1.5rem;
+      color: white;
+      font-weight: 900;
+      text-shadow: 3px 3px 8px rgba(0,0,0,0.5);
+    }
+
+    .cta p {
+      font-size: clamp(1.1rem, 3vw, 1.4rem);
+      color: rgba(255,255,255,0.9);
+      margin-bottom: clamp(2rem, 6vw, 3rem);
+      line-height: 1.7;
+    }
+
+    /* Footer */
+    .footer-premium {
+      background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 100%);
+      color: white;
+      font-family: Poppins, sans-serif;
+      padding: clamp(40px, 8vw, 80px) 0;
+    }
+
+    .footer-link {
+      text-decoration: none !important;
+      transition: all 0.3s ease;
+      color: rgba(255,255,255,0.6) !important;
+    }
+
+    .footer-link:hover {
+      color: #f5a425 !important;
+      transform: translateX(5px);
+    }
+
+    .social-icon {
+      width: clamp(40px, 8vw, 45px);
+      height: clamp(40px, 8vw, 45px);
+      background: rgba(255,255,255,0.1);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      text-decoration: none;
+      font-size: clamp(18px, 4vw, 20px);
+    }
+
+    .social-icon:hover {
+      background: #f5a425 !important;
+      color: #000 !important;
+      transform: translateY(-2px);
+    }
+
+    /* Navbar Mobile */
+    @media (max-width: 991px) {
+      .navbar-collapse {
+        background: rgba(0,0,0,0.98);
+        margin-top: 12px;
+        padding: clamp(15px, 4vw, 25px);
+        border-radius: 15px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+      }
+      
+      .nav-link {
+        margin-left: 0 !important;
+        padding: clamp(12px, 3vw, 16px) 15px !important;
+        display: block;
+        width: 100%;
+        text-align: left;
+      }
+    }
+
+    /* Tablet */
+    @media (min-width: 768px) {
+      .service-cards {
+        grid-template-columns: repeat(2, 1fr);
+      }
+      
+      .testimonial-container {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    /* Desktop */
+    @media (min-width: 992px) {
+      .service-cards {
+        grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      }
+      
+      .testimonial-container {
+        grid-template-columns: repeat(3, 1fr);
+      }
+    }
+
+    /* Large Desktop */
+    @media (min-width: 1400px) {
+      .container {
+        max-width: 1320px;
+      }
+    }
+
+    /* Footer Mobile */
+    @media (max-width: 768px) {
+      .footer-premium {
+        text-align: center !important;
+      }
+      
+      .footer-premium .row > div {
+        margin-bottom: 2rem;
+      }
+      
+      .social-icon {
+        margin: 0 8px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Navbar -->
+  <nav class="navbar navbar-expand-lg navbar-dark fixed-top">
+    <div class="container">
+      <a class="navbar-brand" href="index.html">🦅 PriceHawk</a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse justify-content-end" id="navbarNav">
+        <ul class="navbar-nav">
+          <li class="nav-item"><a class="nav-link" href="#home">Home</a></li>
+          <li class="nav-item"><a class="nav-link" href="stores.html">Stores</a></li>
+          <li class="nav-item"><a class="nav-link" href="dashboard.html">Dashboard</a></li>
+          <li class="nav-item"><a class="nav-link" href="about.html">About</a></li>
+          <li class="nav-item"><a class="nav-link" href="signup.html">Sign Up</a></li>
+          <li class="nav-item"><a class="nav-link" href="login.html">Login</a></li>
+          <li class="nav-item"><a class="nav-link" href="contact.html">Contact</a></li>
+        </ul>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Hero Video Background -->
+  <section class="hero-video">
+    <video autoplay muted loop playsinline id="bg-video">
+      <source src="assets/images/course-video.mp4" type="video/mp4">
+      Video not supported.
+    </video>
+    <div class="video-overlay"></div>
+    
+    <div class="hero-content">
+      <h2>WELCOME</h2>
+      <h2>TO</h2>
+      <h1>PRICEHAWK</h1>
+      <p>🔥 Compare prices across <strong>Amazon • Flipkart • Croma • Myntra • Reliance</strong> in real-time. Save up to 35% instantly!</p>
+      <a href="dashboard.html" class="btn-custom">🚀 Start Comparing Now</a>
+    </div>
+  </section>
+
+  <!-- Stores Section -->
+  <section id="stores" class="services">
+    <h3>Supported Stores</h3>
+    <div class="service-cards">
+      <!-- AMAZON -->
+      <a href="#" class="service-card amazon">
+        <div class="store-logo">
+          <img src="assets/images/amazon.png" alt="Amazon" class="store-img">
+        </div>
+        <div class="overlay">
+          <h4>🧡 Amazon</h4><p>Lightning deals & Prime</p>
+        </div>
+      </a>
+
+      <!-- FLIPKART -->
+      <a href="#" class="service-card flipkart">
+        <div class="store-logo">
+          <img src="assets/images/flipkart.png" alt="Flipkart" class="store-img">
+        </div>
+        <div class="overlay">
+          <h4>🔵 Flipkart</h4><p>SuperCoins & offers</p>
+        </div>
+      </a>
+
+      <!-- Croma -->
+      <a href="#" class="service-card croma">
+        <div class="store-logo">
+          <img src="assets/images/croma.png" alt="Croma" class="store-img">
+        </div>
+        <div class="overlay">
+          <h4>🌸 Croma</h4><p>Store pickup & gadgets</p>
+        </div>
+      </a>
+
+      <!-- Myntra -->
+      <a href="#" class="service-card myntra">
+        <div class="store-logo">
+          <img src="assets/images/myntra.png" alt="Myntra" class="store-img">
+        </div>
+        <div class="overlay">
+          <h4>💖 Myntra</h4><p>Fashion & lifestyle</p>
+        </div>
+      </a>
+
+      <!-- Reliance -->
+      <a href="#" class="service-card reliance">
+        <div class="store-logo">
+          <img src="assets/images/reliance.png" alt="Reliance" class="store-img">
+        </div>
+        <div class="overlay">
+          <h4>🔷 Reliance Digital</h4><p>JioMart & electronics</p>
+        </div>
+      </a>
+    </div>
+  </section>
+
+  <!-- Testimonials -->
+  <section class="testimonials">
+    <h3>What Users Say</h3>
+    <div class="testimonial-container">
+      <div class="testimonial-card">
+        <div class="testimonial-stars">★★★★★</div>
+        <p class="testimonial-text">"Saved ₹8,500 on iPhone 15! PriceHawk shows real-time prices from all stores. Best decision ever!"</p>
+        <p class="testimonial-author">– Rohan S.</p>
+      </div>
+      <div class="testimonial-card">
+        <div class="testimonial-stars">★★★★★</div>
+        <p class="testimonial-text">"One-click comparison across 5 stores. Found Samsung S24 at lowest price + bank offer. Super fast!"</p>
+        <p class="testimonial-author">– Priya K.</p>
+      </div>
+      <div class="testimonial-card">
+        <div class="testimonial-stars">★★★★★</div>
+        <p class="testimonial-text">"Never overpay again! PriceHawk tracks price drops and alerts me. Perfect shopping companion."</p>
+        <p class="testimonial-author">– Amit R.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="cta">
+    <div class="cta-content">
+      <h3>Start Saving Today!</h3>
+      <p>Join 50K+ smart shoppers comparing prices across India's top stores. Never miss a deal again!</p>
+      <a href="dashboard.html" class="btn-custom btn-lg">🔍 Launch Dashboard</a>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="footer-premium">
+    <div class="container px-lg-5 py-5">
+      <div class="row g-4 mb-5">
+        <!-- LOGO COLUMN -->
+        <div class="col-lg-3 col-md-6 mb-4">
+          <h2 class="mb-3" style="
+            background: linear-gradient(135deg, #f5a425, #ffcd3c);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+          ">🦅 PriceHawk</h2>
+          <p class="opacity-75 mb-4">India's Smartest Price Comparison. Real-time tracking across top e-commerce stores.</p>
+          <div class="d-flex gap-3 justify-content-center justify-content-lg-start">
+            <a href="#" class="social-icon">📘</a>
+            <a href="#" class="social-icon">🐦</a>
+            <a href="#" class="social-icon">📷</a>
+          </div>
+        </div>
+
+        <!-- QUICK LINKS -->
+        <div class="col-lg-2 col-md-6 mb-4">
+          <h5 class="fw-bold mb-4 text-white">Quick Links</h5>
+          <ul class="list-unstyled">
+            <li><a href="index.html" class="footer-link">🏠 Home</a></li>
+            <li><a href="#stores" class="footer-link">🏪 Stores</a></li>
+            <li><a href="dashboard.html" class="footer-link">📊 Dashboard</a></li>
+            <li><a href="about.html" class="footer-link">ℹ️ About</a></li>
+            <li><a href="contact.html" class="footer-link">📞 Contact</a></li>
+          </ul>
+        </div>
+
+        <!-- STORES -->
+        <div class="col-lg-3 col-md-6 mb-4">
+          <h5 class="fw-bold mb-4 text-white">Supported Stores</h5>
+          <ul class="list-unstyled">
+            <li><a href="#" class="text-warning fw-semibold">🧡 Amazon</a></li>
+            <li><a href="#" class="text-primary fw-semibold">🔵 Flipkart</a></li>
+            <li><a href="#" class="text-danger fw-semibold">🌸 Croma</a></li>
+            <li><a href="#" class="fw-semibold" style="color: #ff3f6c">💖 Myntra</a></li>
+            <li><a href="#" class="text-info fw-semibold">🔷 Reliance</a></li>
+          </ul>
+        </div>
+
+        <!-- CONTACT -->
+        <div class="col-lg-4 col-md-6 mb-4">
+          <h5 class="fw-bold mb-4 text-white">Contact Info</h5>
+          <ul class="list-unstyled">
+            <li class="mb-3"><i class="fas fa-map-marker-alt me-2 text-warning"></i> Dādri, Uttar Pradesh</li>
+            <li class="mb-3"><i class="fas fa-phone me-2 text-warning"></i> +91 98765-43210</li>
+            <li class="mb-3"><i class="fas fa-envelope me-2 text-warning"></i> support@pricehawk.in</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="border-top border-secondary border-opacity-25 pt-4 mt-5">
+        <div class="row align-items-center">
+          <div class="col-md-6">
+            <p class="mb-0 text-white-50 small">© 2026 PriceHawk. All rights reserved. Made in 🇮🇳</p>
+          </div>
+          <div class="col-md-6 text-md-end">
+            <a href="#" class="text-white-50 small me-3 footer-link">Privacy Policy</a>
+            <a href="#" class="text-white-50 small me-3 footer-link">Terms of Service</a>
+            <a href="contact.html" class="text-white-50 small footer-link">Support</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Scripts -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    // Navbar scroll effect
+    window.addEventListener('scroll', () => {
+      document.querySelector('.navbar').classList.toggle('scrolled', window.scrollY > 100);
+    });
+  </script>
+</body>
+</html>

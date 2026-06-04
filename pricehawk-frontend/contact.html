@@ -1,0 +1,695 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Contact Us - PriceHawk</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Inter', 'Segoe UI', Arial, sans-serif;
+    }
+
+    :root {
+      --bg-dark: #0f0f0f;
+      --bg-mid: #1a1a2e;
+      --card-1: rgba(30, 30, 46, 0.95);
+      --card-2: rgba(37, 37, 54, 0.95);
+      --text: #f8f9fa;
+      --muted: #b8b8b8;
+      --primary: #f5a425;
+      --primary-2: #ffcd3c;
+      --border: rgba(245, 164, 37, 0.24);
+      --border-strong: rgba(245, 164, 37, 0.4);
+      --success: #22c55e;
+      --danger: #ef4444;
+      --shadow: 0 20px 45px rgba(0, 0, 0, 0.35);
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      background: linear-gradient(135deg, var(--bg-dark) 0%, var(--bg-mid) 100%);
+      color: var(--text);
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    a {
+      text-decoration: none;
+    }
+
+    img, iframe {
+      max-width: 100%;
+      display: block;
+    }
+
+    button, input, textarea {
+      font: inherit;
+    }
+
+    .container {
+      width: min(1200px, calc(100% - 32px));
+      margin: 0 auto;
+    }
+
+    /* NAVBAR */
+    .navbar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      background: rgba(17, 17, 17, 0.95);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid rgba(245, 164, 37, 0.2);
+      z-index: 1000;
+    }
+
+    .nav-container {
+      min-height: 76px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 20px;
+    }
+
+    .logo {
+      font-size: clamp(24px, 4vw, 32px);
+      font-weight: 800;
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-2) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      white-space: nowrap;
+    }
+
+    .nav-menu {
+      display: flex;
+      list-style: none;
+      gap: 28px;
+      align-items: center;
+    }
+
+    .nav-link {
+      color: var(--text);
+      font-size: 15px;
+      font-weight: 500;
+      position: relative;
+      transition: color 0.3s ease;
+      padding: 8px 0;
+    }
+
+    .nav-link::after {
+      content: '';
+      position: absolute;
+      left: 0;
+      bottom: 0;
+      width: 0;
+      height: 2px;
+      background: var(--primary);
+      transition: width 0.3s ease;
+    }
+
+    .nav-link:hover,
+    .nav-link.active {
+      color: var(--primary);
+    }
+
+    .nav-link:hover::after,
+    .nav-link.active::after {
+      width: 100%;
+    }
+
+    .hamburger {
+      display: none;
+      width: 48px;
+      height: 48px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: rgba(255,255,255,0.04);
+      cursor: pointer;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+    }
+
+    .hamburger-inner {
+      width: 22px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .hamburger-inner span {
+      display: block;
+      height: 2px;
+      width: 100%;
+      background: var(--primary);
+      transition: all 0.3s ease;
+    }
+
+    .hamburger.active .hamburger-inner span:nth-child(1) {
+      transform: translateY(6px) rotate(45deg);
+    }
+
+    .hamburger.active .hamburger-inner span:nth-child(2) {
+      opacity: 0;
+    }
+
+    .hamburger.active .hamburger-inner span:nth-child(3) {
+      transform: translateY(-6px) rotate(-45deg);
+    }
+
+    /* HERO */
+    .contact-hero {
+      margin-top: 76px;
+      min-height: 42vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 60px 16px;
+      background:
+        linear-gradient(135deg, rgba(245, 164, 37, 0.10), transparent),
+        linear-gradient(135deg, #0f0f0f 0%, #1a1a2e 100%);
+    }
+
+    .contact-hero-content {
+      max-width: 760px;
+    }
+
+    .contact-hero h1 {
+      font-size: clamp(34px, 7vw, 64px);
+      line-height: 1.1;
+      margin-bottom: 12px;
+      background: linear-gradient(135deg, var(--primary), #ffffff);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .contact-hero p {
+      color: #d7d7d7;
+      font-size: clamp(15px, 2.5vw, 18px);
+    }
+
+    /* MAIN */
+    main {
+      padding: 56px 0 80px;
+    }
+
+    .contact-grid {
+      display: grid;
+      grid-template-columns: 1.3fr 0.9fr;
+      gap: 32px;
+      align-items: start;
+    }
+
+    .contact-form,
+    .contact-info {
+      border-radius: 24px;
+      overflow: hidden;
+    }
+
+    /* FORM CARD */
+    .contact-form {
+      background: linear-gradient(135deg, var(--card-1) 0%, var(--card-2) 100%);
+      border: 1px solid var(--border);
+      padding: clamp(22px, 4vw, 42px);
+      backdrop-filter: blur(18px);
+      box-shadow: var(--shadow);
+    }
+
+    .contact-form h2 {
+      font-size: clamp(24px, 4vw, 30px);
+      text-align: center;
+      margin-bottom: 24px;
+      background: linear-gradient(135deg, var(--primary), #fff);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    #status {
+      display: none;
+      margin-bottom: 18px;
+      padding: 14px 16px;
+      border-radius: 12px;
+      font-weight: 600;
+      text-align: center;
+    }
+
+    .status-success {
+      display: block;
+      background: rgba(34, 197, 94, 0.15);
+      color: var(--success);
+      border: 1px solid rgba(34, 197, 94, 0.35);
+    }
+
+    .status-error {
+      display: block;
+      background: rgba(239, 68, 68, 0.15);
+      color: var(--danger);
+      border: 1px solid rgba(239, 68, 68, 0.35);
+    }
+
+    .status-loading {
+      display: block;
+      background: rgba(245, 164, 37, 0.12);
+      color: var(--primary);
+      border: 1px solid rgba(245, 164, 37, 0.35);
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 18px;
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .form-group.full {
+      grid-column: 1 / -1;
+    }
+
+    .form-group label {
+      font-size: 14px;
+      font-weight: 600;
+      color: #f4f4f4;
+    }
+
+    .contact-form input,
+    .contact-form textarea,
+    .contact-form select {
+      width: 100%;
+      min-height: 52px;
+      padding: 14px 16px;
+      background: rgba(255, 255, 255, 0.07);
+      border: 1.5px solid var(--border);
+      border-radius: 14px;
+      color: #fff;
+      font-size: 16px;
+      transition: all 0.25s ease;
+    }
+
+    .contact-form textarea {
+      min-height: 150px;
+      resize: vertical;
+    }
+
+    .contact-form input::placeholder,
+    .contact-form textarea::placeholder {
+      color: rgba(248, 249, 250, 0.62);
+    }
+
+    .contact-form input:focus,
+    .contact-form textarea:focus,
+    .contact-form select:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 4px rgba(245, 164, 37, 0.12);
+      background: rgba(255, 255, 255, 0.11);
+    }
+
+    .btn {
+      width: 100%;
+      min-height: 54px;
+      padding: 16px 18px;
+      background: linear-gradient(135deg, var(--primary), var(--primary-2));
+      color: #000;
+      border: none;
+      border-radius: 14px;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      transition: all 0.3s ease;
+    }
+
+    .btn:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 14px 28px rgba(245, 164, 37, 0.32);
+    }
+
+    .btn:disabled {
+      opacity: 0.75;
+      cursor: not-allowed;
+    }
+
+    /* INFO CARD */
+    .contact-info {
+      background: linear-gradient(135deg, rgba(245,164,37,0.10) 0%, rgba(255,255,255,0.02) 100%);
+      border: 1px solid rgba(245,164,37,0.22);
+      padding: clamp(22px, 3.5vw, 34px);
+    }
+
+    .contact-info h3 {
+      font-size: clamp(20px, 3vw, 24px);
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .contact-item {
+      display: flex;
+      gap: 14px;
+      align-items: flex-start;
+      padding: 16px 0;
+      border-bottom: 1px solid rgba(245,164,37,0.12);
+    }
+
+    .contact-item:last-child {
+      border-bottom: none;
+    }
+
+    .contact-icon {
+      width: 46px;
+      height: 46px;
+      background: linear-gradient(135deg, var(--primary), var(--primary-2));
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #000;
+      flex-shrink: 0;
+      font-size: 18px;
+    }
+
+    .contact-details h4 {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--primary);
+      margin-bottom: 4px;
+    }
+
+    .contact-details p {
+      color: var(--muted);
+      font-size: 15px;
+    }
+
+    .map-wrap {
+      margin-top: 24px;
+      border-radius: 16px;
+      overflow: hidden;
+      border: 1px solid rgba(245,164,37,0.2);
+      box-shadow: 0 10px 24px rgba(0,0,0,0.25);
+    }
+
+    .map-wrap iframe {
+      width: 100%;
+      height: 240px;
+      border: 0;
+    }
+
+    /* FOOTER */
+    footer {
+      background: rgba(17, 17, 17, 0.9);
+      border-top: 1px solid rgba(245, 164, 37, 0.1);
+      text-align: center;
+      padding: 28px 16px;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    /* TABLET */
+    @media (max-width: 1024px) {
+      .contact-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* MOBILE */
+    @media (max-width: 768px) {
+      .container {
+        width: min(100% - 20px, 1200px);
+      }
+
+      .hamburger {
+        display: flex;
+      }
+
+      .nav-menu {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        width: 100%;
+        background: rgba(17, 17, 17, 0.98);
+        border-top: 1px solid rgba(245, 164, 37, 0.15);
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0;
+        padding: 12px 20px 18px;
+        display: none;
+      }
+
+      .nav-menu.active {
+        display: flex;
+      }
+
+      .nav-menu li {
+        width: 100%;
+      }
+
+      .nav-link {
+        display: block;
+        width: 100%;
+        padding: 14px 0;
+        font-size: 16px;
+      }
+
+      .nav-link::after {
+        display: none;
+      }
+
+      .contact-hero {
+        min-height: 34vh;
+        padding: 44px 16px;
+      }
+
+      main {
+        padding: 32px 0 60px;
+      }
+
+      .form-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .contact-form,
+      .contact-info {
+        border-radius: 20px;
+      }
+
+      .map-wrap iframe {
+        height: 220px;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .contact-form {
+        padding: 20px 16px;
+      }
+
+      .contact-info {
+        padding: 20px 16px;
+      }
+
+      .btn {
+        font-size: 15px;
+      }
+
+      .contact-icon {
+        width: 42px;
+        height: 42px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <nav class="navbar">
+    <div class="container nav-container">
+      <a href="index.html" class="logo">🦅 PriceHawk</a>
+
+      <ul class="nav-menu" id="navMenu">
+        <li><a href="index.html" class="nav-link">Home</a></li>
+        <li><a href="stores.html" class="nav-link">Stores</a></li>
+        <li><a href="dashboard.html" class="nav-link">Dashboard</a></li>
+        <li><a href="about.html" class="nav-link">About</a></li>
+        <li><a href="contact.html" class="nav-link active">Contact</a></li>
+      </ul>
+
+      <button class="hamburger" id="hamburger" aria-label="Open menu" aria-expanded="false">
+        <div class="hamburger-inner">
+          <span></span>
+          <span></span>
+          <span></span>
+        </div>
+      </button>
+    </div>
+  </nav>
+
+  <section class="contact-hero">
+    <div class="contact-hero-content">
+      <h1>Get In Touch</h1>
+      <p>Questions, support, or feedback — contact the PriceHawk team and we’ll get back to you quickly.</p>
+    </div>
+  </section>
+
+  <main>
+    <div class="container">
+      <div class="contact-grid">
+
+        <form id="contactForm" class="contact-form">
+          <h2>Send us a Message</h2>
+          <div id="status"></div>
+
+          <div class="form-grid">
+            <div class="form-group">
+              <label for="name">Your Name *</label>
+              <input type="text" id="name" name="name" placeholder="Enter your full name" required>
+            </div>
+
+            <div class="form-group">
+              <label for="email">Your Email *</label>
+              <input type="email" id="email" name="email" placeholder="Enter your email address" required>
+            </div>
+
+            <div class="form-group">
+              <label for="phone">Phone</label>
+              <input type="text" id="phone" name="phone" placeholder="Optional phone number">
+            </div>
+
+            <div class="form-group">
+              <label for="subject">Subject *</label>
+              <input type="text" id="subject" name="subject" placeholder="What is this about?" required>
+            </div>
+
+            <div class="form-group full">
+              <label for="message">Message *</label>
+              <textarea id="message" name="message" placeholder="Tell us how we can help you save more..." required></textarea>
+            </div>
+
+            <div class="form-group full">
+              <button type="submit" class="btn" id="submitBtn">Send Message</button>
+            </div>
+          </div>
+        </form>
+
+        <div class="contact-info">
+          <h3><i class="fas fa-life-ring"></i> PriceHawk Support</h3>
+
+          <div class="contact-item">
+            <div class="contact-icon">
+              <i class="fas fa-envelope"></i>
+            </div>
+            <div class="contact-details">
+              <h4>Email Support</h4>
+              <p>support@pricehawk.in</p>
+            </div>
+          </div>
+
+          <div class="contact-item">
+            <div class="contact-icon">
+              <i class="fas fa-phone"></i>
+            </div>
+            <div class="contact-details">
+              <h4>Phone Support</h4>
+              <p>+91 98765-43410</p>
+              <p>Mon-Sat 10AM-7PM IST</p>
+            </div>
+          </div>
+
+          <div class="contact-item">
+            <div class="contact-icon">
+              <i class="fas fa-map-marker-alt"></i>
+            </div>
+            <div class="contact-details">
+              <h4>Our Location</h4>
+              <p>Jamshedpur, Jharkhand</p>
+            </div>
+          </div>
+
+          <div class="map-wrap">
+            <iframe
+              src="https://www.google.com/maps?q=Jamshedpur,Jharkhand&output=embed"
+              loading="lazy"
+              allowfullscreen
+              referrerpolicy="no-referrer-when-downgrade">
+            </iframe>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </main>
+
+  <footer>
+    © 2026 PriceHawk. Built with passion from Jamshedpur, Jharkhand | Helping India save smarter
+  </footer>
+
+  <script>
+    const hamburger = document.getElementById('hamburger');
+    const navMenu = document.getElementById('navMenu');
+    const contactForm = document.getElementById('contactForm');
+    const statusBox = document.getElementById('status');
+    const submitBtn = document.getElementById('submitBtn');
+
+    hamburger.addEventListener('click', () => {
+      navMenu.classList.toggle('active');
+      hamburger.classList.toggle('active');
+      const isOpen = navMenu.classList.contains('active');
+      hamburger.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+    });
+
+    document.querySelectorAll('.nav-link').forEach(link => {
+      link.addEventListener('click', () => {
+        navMenu.classList.remove('active');
+        hamburger.classList.remove('active');
+        hamburger.setAttribute('aria-expanded', 'false');
+      });
+    });
+
+    contactForm.addEventListener('submit', function (e) {
+      e.preventDefault();
+
+      const name = document.getElementById('name').value.trim();
+      const email = document.getElementById('email').value.trim();
+      const subject = document.getElementById('subject').value.trim();
+      const message = document.getElementById('message').value.trim();
+
+      if (!name || !email || !subject || !message) {
+        statusBox.className = 'status-error';
+        statusBox.textContent = 'Please fill all required fields.';
+        return;
+      }
+
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Sending...';
+      statusBox.className = 'status-loading';
+      statusBox.textContent = 'Sending your message...';
+
+      setTimeout(() => {
+        statusBox.className = 'status-success';
+        statusBox.textContent = "✅ Message sent successfully! We'll reply within 24 hours.";
+        contactForm.reset();
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Send Message';
+      }, 1500);
+    });
+  </script>
+
+</body>
+</html>
