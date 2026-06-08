@@ -15,13 +15,13 @@ function searchPhone() {
     const results = document.getElementById("results");
     results.innerHTML = `<div class="loading"><div class="spinner"></div><p>🔍 Searching Results...</p></div>`;
 
-    fetch(`http://localhost:8080/api/smartphones?query=${encodeURIComponent(query)}`)
+    fetch(`https://pricehawk-lc2e.onrender.com/api/smartphones?query=${encodeURIComponent(query)}`)
     .then(response => response.json())
     .then(data => {
         if(!data || data.length === 0) {
             results.innerHTML = `<div class="empty-state"><div class="empty-icon">📱</div><p>No prices found for "${query}"</p></div>`;
             // 🔥 AI VERDICT BOX UPDATE (YE ADD KARO 👇)
-fetch(`http://localhost:8080/api/ai-verdict?query=${encodeURIComponent(query)}`)
+fetch(`https://pricehawk-lc2e.onrender.com/api/ai-verdict?query=${encodeURIComponent(query)}`)
 .then(res => res.json())
 .then(aiData => {
     document.getElementById('aiMain').textContent = aiData.main || '📱 Premium Flagship';

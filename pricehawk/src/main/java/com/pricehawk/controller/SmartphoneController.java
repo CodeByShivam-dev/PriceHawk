@@ -19,7 +19,8 @@ import java.util.List;
 @CrossOrigin(origins = {
         "http://127.0.0.1:5500",
         "http://localhost:5500",
-        "http://localhost:8080"
+        "http://localhost:8080",
+        "https://price-hawk-ochre.vercel.app"
 })
 @RequestMapping("/api/smartphones")
 @Slf4j
