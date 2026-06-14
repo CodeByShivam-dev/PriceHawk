@@ -55,45 +55,17 @@ Users waste time switching between:
 ## ⚙️ System Architecture
 
 ### 🧩 High-Level Backend Architecture
-┌──────────────────────────┐
-│ Frontend UI │
-│ (HTML / JS / Bootstrap) │
-└──────────┬───────────────┘
-│ REST API
-▼
-┌──────────────────────────┐
-│ Spring Boot Controller │
-└──────────┬───────────────┘
-│
-▼
-┌──────────────────────────┐
-│ SmartphoneService │
-│ (Core Orchestrator) │
-└──────────┬───────────────┘
-┌──────────────────┼───────────────────┐
-▼ ▼ ▼
-┌──────────────┐ ┌──────────────┐ ┌────────────────┐
-│ Amazon Scraper│ │ Flipkart │ │ Croma Scraper │
-│ (Jsoup DOM) │ │ Scraper │ │ (Fallback) │
-└──────────────┘ └──────────────┘ └────────────────┘
-│
-▼
-┌──────────────────────────┐
-│ Smart DTO Aggregation │
-│ SmartphonePriceResult │
-└──────────┬───────────────┘
-▼
-┌──────────────────────────┐
-│ Async Specs Enrichment │
-│ (PhoneSpecsService) │
-└──────────┬───────────────┘
-▼
-┌──────────────────────────┐
-│ PostgreSQL / DB Layer │
-│ PriceSnapshot + Specs │
-└──────────────────────────┘
-
-
+flowchart TD
+    A[Frontend UI<br/>HTML / JS / Bootstrap] -->|REST API| B[Spring Boot Controller]
+    B --> C[SmartphoneService<br/>Core Orchestrator]
+    C --> D[Amazon Scraper<br/>Jsoup DOM]
+    C --> E[Flipkart Scraper]
+    C --> F[Croma Scraper<br/>Fallback]
+    D --> G[Smart DTO Aggregation<br/>SmartphonePriceResult]
+    E --> G
+    F --> G
+    G --> H[Async Specs Enrichment<br/>PhoneSpecsService]
+    H --> I[PostgreSQL / DB Layer<br/>PriceSnapshot + Specs]
 ---
 
 ## 🔥 Key Features
