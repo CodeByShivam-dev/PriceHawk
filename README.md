@@ -223,20 +223,41 @@ Users waste time switching between:
 
 ---
 
-## 🔄 System Flow
-User Search → Controller
-↓
-SmartphoneService
-↓
-Parallel Scraping (Amazon + Flipkart)
-↓
-DTO Normalization
-↓
-Cache Check (DB)
-↓
-Specs Enrichment (Async)
-↓
-Response Sorted by Price
+## 🔄 Runtime Execution Flow
+1. Frontend sends search request
+        ↓
+2. SmartphoneController receives API call
+        ↓
+3. SmartphoneService (Core Engine Starts)
+        ↓
+4. CHECK CACHE:
+   ├── PriceSnapshot (last 3 hours)
+   └── If HIT → return immediately
+        ↓ (MISS)
+5. PARALLEL SCRAPING (ExecutorService)
+   ├── AmazonScraper
+   ├── FlipkartScraper
+   ├── CromaScraper
+        ↓
+6. PriceScraperService normalizes results
+        ↓
+7. DTO PIPELINE:
+   SmartphonePriceResult created
+        ↓
+8. SPEC ENRICHMENT ENGINE:
+   ├── DB cache lookup (PhoneSpecs)
+   ├── Jsoup extractors run if needed
+   ├── summary generated
+        ↓
+9. ASYNC BACKGROUND JOB:
+   PhoneSpecsService.enrichWithSpecs()
+        ↓
+10. DATABASE WRITE (non-blocking)
+   ├── PriceSnapshot (history tracking)
+   ├── SearchHistory (analytics)
+   ├── PhoneSpecs (cache update)
+        ↓
+11. RESPONSE SENT TO FRONTEND
 ---
 
 ## 📡 API Overview
