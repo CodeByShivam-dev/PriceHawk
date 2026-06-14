@@ -52,37 +52,32 @@ Users waste time switching between:
 
 ---
 
-## ⚙️ System Architecture 
+## ⚙️ System Architecture
 
+```text
 Frontend UI (HTML / JS / Bootstrap)
                 |
-                | REST API
                 v
-     Spring Boot Controller Layer
+Spring Boot Controller
                 |
                 v
-   SmartphoneService (Core Orchestrator)
+SmartphoneService (Core Orchestrator)
                 |
-    ---------------------------------
-    |              |               |
-    v              v               v
-Amazon Scraper  Flipkart Scraper  Croma Scraper
-(Jsoup DOM)                         (Fallback)
-    |              |               |
-    ---------------------------------
+   -----------------------------
+   |           |              |
+   v           v              v
+Amazon     Flipkart       Croma
+Scraper    Scraper        Scraper
                 |
                 v
-   Smart DTO Aggregation Layer
- (SmartphonePriceResult Builder)
+Smart DTO Aggregation
                 |
                 v
-   Async Specs Enrichment Service
-        (PhoneSpecsService)
+Async Specs Enrichment
                 |
                 v
- PostgreSQL Database Layer
- (PriceSnapshot + Specs Storage)
-
+PostgreSQL DB (Price + Specs)
+```
 ## 🔥 Key Features
 
 ### ⚡ Real-Time Multi-Platform Price Aggregation
