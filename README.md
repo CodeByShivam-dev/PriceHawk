@@ -1,98 +1,201 @@
-<h1 align="center">⚡ PriceHawk — AI-Powered Smartphone Price Comparator</h1>
+⚡ PriceHawk — AI-Powered Smartphone Price Intelligence Engine
+<p align="center"> <img src="https://img.shields.io/badge/Java-17+-red?logo=java&logoColor=white" /> <img src="https://img.shields.io/badge/Spring%20Boot-3.5.7-green?logo=springboot&logoColor=white" /> <img src="https://img.shields.io/badge/PostgreSQL-Live%20DB-blue?logo=postgresql&logoColor=white" /> <img src="https://img.shields.io/badge/Jsoup-Web%20Scraping-orange" /> <img src="https://img.shields.io/badge/ExecutorService-Async%20Engine-purple" /> <img src="https://img.shields.io/badge/Maven-Build-yellow" /> </p> <p align="center"> <b>Smart Search. Real-Time Pricing. Intelligent Decisions.</b><br> A high-performance backend system that aggregates, analyzes, and enriches smartphone pricing data across major Indian e-commerce platforms. </p>
+🧠 Vision
 
-<p align="center">
-  <img src="https://img.shields.io/badge/Java-17+-red?logo=java&logoColor=white" />
-  <img src="https://img.shields.io/badge/Spring%20Boot-3.5.7-green?logo=springboot&logoColor=white" />
-  <img src="https://img.shields.io/badge/PostgreSQL-Live%20DB-blue?logo=postgresql&logoColor=white" />
-  <img src="https://img.shields.io/badge/ExecutorService-Concurrency%20Engine-orange?logo=java&logoColor=white" />
-  <img src="https://img.shields.io/badge/Build-Maven-yellow?logo=apachemaven&logoColor=white" />
-  <img src="https://img.shields.io/badge/License-MIT-lightgrey" />
-</p>
+PriceHawk is engineered to solve a real-world problem:
+👉 “Finding the best smartphone price across fragmented e-commerce platforms in real time.”
 
-<p align="center">
-  <strong>Smart Search. Smarter Decisions.</strong><br>
-  PriceHawk doesn’t just compare — it predicts smarter buying decisions.
-</p>
+It acts as a distributed price intelligence engine that:
 
----
+Scrapes live pricing data
+Normalizes product models
+Caches results intelligently
+Enriches data with specifications
+Tracks historical pricing trends
+🚨 Problem Statement
 
-## 🧠 Vision
+E-commerce pricing is:
 
-**PriceHawk** is a real-time **smartphone price comparison system** built using **Spring Boot + Java Concurrency**, designed to fetch, compare, and analyze smartphone prices across platforms like **Amazon, Flipkart, and Croma** using APIs — enhanced with AI-driven recommendations and price trend notifications.
+Fragmented across platforms
+Frequently inconsistent
+Difficult to compare manually
+Rapidly changing
 
-> The goal: Deliver the best price, every time — with real-time updates, concurrency safety, and scalable design.
+Users waste time switching between:
 
----
+Amazon
+Flipkart
+Croma
 
-## 🚀 Current Progress
+👉 PriceHawk eliminates this friction by aggregating everything into a unified response layer.
 
-✅ **Thread Pool Executor (Async Engine)**  
-→ Handles multiple concurrent API requests efficiently  
-→ Uses custom `AsyncConfig` with `ThreadPoolExecutor`  
-→ Prevents overload using queue capacity and fallback policy  
+⚙️ System Architecture
+🧩 High-Level Backend Architecture
+                ┌──────────────────────────┐
+                │      Frontend UI         │
+                │ (HTML / JS / Bootstrap)  │
+                └──────────┬───────────────┘
+                           │ REST API
+                           ▼
+                ┌──────────────────────────┐
+                │   Spring Boot Controller │
+                └──────────┬───────────────┘
+                           │
+                           ▼
+                ┌──────────────────────────┐
+                │   SmartphoneService      │
+                │  (Core Orchestrator)     │
+                └──────────┬───────────────┘
+        ┌──────────────────┼───────────────────┐
+        ▼                  ▼                   ▼
+┌──────────────┐  ┌──────────────┐  ┌────────────────┐
+│ Amazon Scraper│  │ Flipkart     │  │ Croma Scraper  │
+│ (Jsoup DOM)   │  │ Scraper      │  │ (Fallback)     │
+└──────────────┘  └──────────────┘  └────────────────┘
+        │
+        ▼
+┌──────────────────────────┐
+│ Smart DTO Aggregation    │
+│ SmartphonePriceResult    │
+└──────────┬───────────────┘
+           ▼
+┌──────────────────────────┐
+│ Async Specs Enrichment   │
+│ (PhoneSpecsService)      │
+└──────────┬───────────────┘
+           ▼
+┌──────────────────────────┐
+│ PostgreSQL / DB Layer    │
+│ PriceSnapshot + Specs    │
+└──────────────────────────┘
+🔥 Key Features
+⚡ Real-Time Multi-Platform Price Aggregation
+Amazon, Flipkart, Croma scraping
+Parallel execution using ExecutorService
+🧠 Intelligent Caching Layer
+Normalized model-based caching
+3-hour snapshot reuse window
+🔍 Robust Web Scraping Engine
+Jsoup-based resilient selectors
+Multi-fallback DOM parsing strategy
+📊 Price History Tracking
+Append-only PriceSnapshot model
+Enables future trend prediction
+🧩 Async Specification Enrichment
+Non-blocking background scraping
+Separate worker thread pool
+📦 Unified DTO Pipeline
+SmartphonePriceResult standard output format
+🔔 Future-Ready Notification System
+Price drop alerts (architecture already prepared)
+🧱 Tech Stack
+Layer	Technology
+Backend	Java 17 + Spring Boot
+Scraping	Jsoup
+Concurrency	ExecutorService / CompletableFuture
+Database	PostgreSQL
+API Client	WebClient
+Build Tool	Maven
+Architecture	Layered + Modular Monolith
+🧩 Database Schema (Overview)
+📌 phone_specs
+Column	Type	Description
+id	BIGINT	Primary Key
+model_normalized	VARCHAR	Indexed model key
+summary	TEXT	Specs summary
+last_updated	TIMESTAMP	Refresh time
+📌 price_snapshot
+Column	Type	Description
+id	BIGINT	Primary Key
+model_normalized	VARCHAR	Normalized model
+store	VARCHAR	Amazon / Flipkart
+price	DOUBLE	Captured price
+product_url	TEXT	Product link
+image_url	TEXT	Cached image
+rating	DOUBLE	Product rating
+in_stock	BOOLEAN	Availability
+captured_at	TIMESTAMP	Snapshot time
+📌 search_history
+Column	Type	Description
+id	BIGINT	Primary Key
+query	TEXT	User search
+query_normalized	TEXT	Indexed key
+results_count	INT	Matches found
+searched_at	TIMESTAMP	Time
+📌 tracked_products
+Column	Type	Description
+id	BIGINT	Primary Key
+product_name	TEXT	Product
+store	VARCHAR	Platform
+current_price	DOUBLE	Latest price
+target_price	DOUBLE	Alert threshold
+product_url	TEXT	Link
+image_url	TEXT	Thumbnail
+tracked_at	TIMESTAMP	Start time
+🔄 System Flow
+User Search → Controller
+        ↓
+SmartphoneService
+        ↓
+Parallel Scraping (Amazon + Flipkart)
+        ↓
+DTO Normalization
+        ↓
+Cache Check (DB)
+        ↓
+Specs Enrichment (Async)
+        ↓
+Response Sorted by Price
+📡 API Overview
+🔎 Search Smartphones
+GET /api/search?query=iphone 15
+📦 Response
+[
+  {
+    "store": "Amazon",
+    "title": "iPhone 15 128GB",
+    "price": 72999,
+    "productUrl": "...",
+    "imageUrl": "...",
+    "rating": 4.5,
+    "specsSummary": "8GB RAM · 128GB Storage · A16 Bionic"
+  }
+]
+📊 Sample Output Flow
+Input: Samsung S23
+Output:
+Amazon → ₹69,999
+Flipkart → ₹67,999
+Croma → ₹70,499
 
-✅ **Smartphone Controller (API Layer)**  
-→ Accepts smartphone search queries  
-→ Fetches live data from multiple sources (mock stage)  
-→ Integrates with service layer for price aggregation  
+👉 System auto-selects best deal + attaches specs
 
-✅ **PostgreSQL Integration (Base Ready)**  
-→ Configurable in `application.properties`  
-→ Future-ready for storing historical price trends  
+🚀 Roadmap
+ Redis caching layer for ultra-fast lookup
+ AI-based price prediction engine
+ Notification system (WhatsApp / Email)
+ User authentication system
+ GraphQL API layer
+ React dashboard frontend
+ Mobile app integration
+🧠 Learnings / Design Highlights
+Built a fault-tolerant scraping architecture
+Implemented concurrent API aggregation
+Designed normalized caching strategy
+Handled unstable HTML structures safely
+Built async enrichment pipeline
+Separated concerns across clean service layers
+💼 Skills Demonstrated
+Java Backend Engineering
+Spring Boot Architecture Design
+Web Scraping (Jsoup)
+Multi-threading & Concurrency
+REST API Development
+Database Design (Normalization)
+System Design (Scalable Monolith)
+Performance Optimization
+Fault-Tolerant Engineering
+👨‍💻 Author
 
----
-
-## ⚙️ Tech Stack
-
-| Layer | Technology |
-|:--|:--|
-| Language | **Java (17+)** |
-| Framework | **Spring Boot 3.5.7** |
-| Database | **PostgreSQL (runtime)** |
-| Async / Multithreading | **ExecutorService (ThreadPool)** |
-| Exception Handling | **Custom + Global Handler (planned)** |
-| Build Tool | **Maven** |
-| Future AI Layer | **Price Drop Prediction (ML)** |
-
----
-
-## 🧩 System Design (Phase 1)
-
-- **User Query:** Search any smartphone model  
-- **API Aggregation:** Calls multiple e-commerce APIs concurrently  
-- **Result Merge:** Sorts and filters the best deals  
-- **Price Alerts:** Email or SMS notification planned  
-- **Data Persistence:** Logs queries and user preferences for insights  
-
----
-
-## 🔜 Roadmap
-
-- [ ] Integrate live APIs (Amazon, Flipkart, Croma)  
-- [ ] Redis caching for faster repeated searches  
-- [ ] Notification system (email/SMS for price drops)  
-- [ ] Global Exception Handling  
-- [ ] AI-based price prediction module  
-- [ ] Frontend dashboard (React or Thymeleaf)  
-
----
-
-## 🧱 Architecture Overview
-
-```text
-client (web/mobile)
-    ↓
-REST Controller  →  Service Layer  →  Repository (DB)
-                     ↓
-                Concurrency Engine
-                     ↓
-                API Aggregator (Amazon / Flipkart / Croma)
-
-About
-
-Author: Shivam Kumar
-Goal: Build an AI-backed smartphone comparison engine with concurrency, notifications, and intelligent insights.
-Status: 🚧 In development (Core API + Async Engine ready)
-
-
-
+Shivam Kumar
+Backend Developer | Java | Spring Boot | System Design Enthusiast
