@@ -55,28 +55,79 @@ Users waste time switching between:
 ## ⚙️ System Architecture
 
 ```text
-Frontend UI (HTML / JS / Bootstrap)
-                |
-                v
-Spring Boot Controller
-                |
-                v
-SmartphoneService (Core Orchestrator)
-                |
-   -----------------------------
-   |           |              |
-   v           v              v
-Amazon     Flipkart       Croma
-Scraper    Scraper        Scraper
-                |
-                v
-Smart DTO Aggregation
-                |
-                v
-Async Specs Enrichment
-                |
-                v
-PostgreSQL DB (Price + Specs)
+                        ┌────────────────────────────┐
+                        │        Frontend UI         │
+                        │ (HTML / JS / Bootstrap)    │
+                        └─────────────┬──────────────┘
+                                      │ REST API
+                                      ▼
+                        ┌────────────────────────────┐
+                        │ SmartphoneController       │
+                        │ (API Gateway Layer)        │
+                        └─────────────┬──────────────┘
+                                      │
+                                      ▼
+                ┌────────────────────────────────────────┐
+                │ SmartphoneService (CORE ORCHESTRATOR)  │
+                │        ⭐ MAIN BRAIN ENGINE             │
+                └──────────────┬─────────────┬───────────┘
+                               │             │
+               ┌───────────────▼─┐       ┌───▼────────────────┐
+               │ Cache Layer      │       │ Async Execution    │
+               │ PriceSnapshot DB │       │ ExecutorService    │
+               │ (3h reuse window)│       │ Parallel Scraping  │
+               └───────────────┬─┘       └───┬────────────────┘
+                               │             │
+                               └──────┬──────┘
+                                      ▼
+                      ┌────────────────────────────────┐
+                      │ PriceScraperService            │
+                      │ (Multi-Vendor Aggregator)      │
+                      └──────┬──────────┬──────────────┘
+                             │          │
+         ┌────────────────────▼┐  ┌────▼────────────────┐  ┌────────────────┐
+         │ Amazon Scraper      │  │ Flipkart Scraper    │  │ Croma Scraper   │
+         │ (Jsoup DOM parsing) │  │ (Fallback selectors)│  │ (Resilient)     │
+         └─────────┬──────────┘  └────────┬────────────┘  └──────┬─────────┘
+                   │                       │                       │
+                   └──────────────┬────────┴──────────────┬──────┘
+                                  ▼
+                    ┌───────────────────────────────┐
+                    │ SmartphonePriceResult DTO     │
+                    │ (Unified Response Model)      │
+                    └──────────────┬────────────────┘
+                                   ▼
+        ┌────────────────────────────────────────────────────┐
+        │ Specs Engine (Jsoup + Extractors + DB Cache)       │
+        │                                                    │
+        │  Amazon / Flipkart / Generic Spec Extractors       │
+        │  ↓                                                  │
+        │  PhoneSpecs DB Cache (Normalized Lookup)           │
+        └───────────────────┬────────────────────────────────┘
+                            ▼
+                ┌──────────────────────────────┐
+                │ Enriched Product Results      │
+                │ (Price + Specs + Rating)      │
+                └──────────────┬───────────────┘
+                               ▼
+                ┌──────────────────────────────┐
+                │ PhoneSpecsService            │
+                │ (Async Background Worker)    │
+                └──────────────┬───────────────┘
+                               ▼
+                ┌──────────────────────────────────────────┐
+                │ Persistence Layer                        │
+                │                                          │
+                │  • PriceSnapshot (Price History)         │
+                │  • SearchHistory (Analytics)             │
+                │  • PhoneSpecs (Specs Cache)              │
+                └───────────────────┬──────────────────────┘
+                                    ▼
+                        ┌──────────────────────┐
+                        │ Frontend Response    │
+                        │ Sorted Best Deals    │
+                        │ Store Redirect Links  │
+                        └──────────────────────┘
 ```
 ## 🔥 Key Features
 
