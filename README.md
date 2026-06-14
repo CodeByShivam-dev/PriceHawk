@@ -224,6 +224,8 @@ Users waste time switching between:
 ---
 
 ## 🔄 Runtime Execution Flow
+
+```text
 1. Frontend sends search request
         ↓
 2. SmartphoneController receives API call
@@ -233,32 +235,35 @@ Users waste time switching between:
 4. CHECK CACHE:
    ├── PriceSnapshot (last 3 hours)
    └── If HIT → return immediately
-        ↓ (MISS)
-5. PARALLEL SCRAPING (ExecutorService)
+        ↓ (CACHE MISS)
+5. PARALLEL SCRAPING (ExecutorService ThreadPool)
    ├── AmazonScraper
    ├── FlipkartScraper
    ├── CromaScraper
         ↓
-6. PriceScraperService normalizes results
+6. PriceScraperService:
+   └── Normalizes + standardizes all vendor responses
         ↓
 7. DTO PIPELINE:
-   SmartphonePriceResult created
+   └── SmartphonePriceResult (Unified Response Object)
         ↓
 8. SPEC ENRICHMENT ENGINE:
-   ├── DB cache lookup (PhoneSpecs)
-   ├── Jsoup extractors run if needed
-   ├── summary generated
+   ├── PhoneSpecs DB Cache lookup
+   ├── Jsoup-based extraction (if missing)
+   └── Specs summary generation
         ↓
-9. ASYNC BACKGROUND JOB:
-   PhoneSpecsService.enrichWithSpecs()
+9. ASYNC BACKGROUND PROCESS:
+   └── PhoneSpecsService.enrichWithSpecs()
         ↓
-10. DATABASE WRITE (non-blocking)
-   ├── PriceSnapshot (history tracking)
-   ├── SearchHistory (analytics)
-   ├── PhoneSpecs (cache update)
+10. NON-BLOCKING DATABASE OPERATIONS:
+   ├── PriceSnapshot  → price history tracking
+   ├── SearchHistory → analytics & trends
+   └── PhoneSpecs     → cached spec updates
         ↓
-11. RESPONSE SENT TO FRONTEND
----
+11. RESPONSE SENT TO FRONTEND:
+   └── Sorted best deals + store links (Amazon / Flipkart / Croma)
+```
+--- 
 
 ## 📡 API Overview
 
