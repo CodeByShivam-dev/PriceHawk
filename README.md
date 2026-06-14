@@ -52,22 +52,36 @@ Users waste time switching between:
 
 ---
 
-flowchart TD
-    A[Frontend UI<br/>HTML / JS / Bootstrap] -->|REST API| B[Spring Boot Controller]
+## ⚙️ System Architecture 
 
-    B --> C[SmartphoneService<br/>Core Orchestrator]
-
-    C --> D[Amazon Scraper<br/>Jsoup DOM]
-    C --> E[Flipkart Scraper]
-    C --> F[Croma Scraper<br/>Fallback]
-
-    D --> G[Smart DTO Aggregation<br/>SmartphonePriceResult]
-    E --> G
-    F --> G
-
-    G --> H[Async Specs Enrichment<br/>PhoneSpecsService]
-
-    H --> I[PostgreSQL / DB Layer<br/>PriceSnapshot + Specs]
+Frontend UI (HTML / JS / Bootstrap)
+                |
+                | REST API
+                v
+     Spring Boot Controller Layer
+                |
+                v
+   SmartphoneService (Core Orchestrator)
+                |
+    ---------------------------------
+    |              |               |
+    v              v               v
+Amazon Scraper  Flipkart Scraper  Croma Scraper
+(Jsoup DOM)                         (Fallback)
+    |              |               |
+    ---------------------------------
+                |
+                v
+   Smart DTO Aggregation Layer
+ (SmartphonePriceResult Builder)
+                |
+                v
+   Async Specs Enrichment Service
+        (PhoneSpecsService)
+                |
+                v
+ PostgreSQL Database Layer
+ (PriceSnapshot + Specs Storage)
 
 ## 🔥 Key Features
 
